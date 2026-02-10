@@ -368,61 +368,62 @@ export default async function Home({
             </Link>
           ))}
         </div>
-        {(summaryTopics.length > 0 || rankingTopics.length > 0) ? (
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {summaryTopics.map((topic) => (
-              <Link
-                key={topic.id}
-                href={`/topics/${topic.slug}`}
-                className="group overflow-hidden rounded-3xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
-              >
-                <div className="relative h-24 overflow-hidden bg-accent-soft">
-                  {getTopicCover(topic) ? (
-                    <img
-                      src={getTopicCover(topic) ?? ""}
-                      alt={topic.title}
-                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
-                      Summary
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <p className="text-xs font-semibold text-muted">まとめ</p>
-                  <p className="mt-1 text-sm font-semibold">{topic.title}</p>
-                </div>
-              </Link>
-            ))}
-            {rankingTopics.map((topic) => (
-              <Link
-                key={topic.id}
-                href={`/topics/${topic.slug}`}
-                className="group overflow-hidden rounded-3xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
-              >
-                <div className="relative h-24 overflow-hidden bg-accent-soft">
-                  {getTopicCover(topic) ? (
-                    <img
-                      src={getTopicCover(topic) ?? ""}
-                      alt={topic.title}
-                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
-                      Ranking
-                    </div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <p className="text-xs font-semibold text-muted">ランキング</p>
-                  <p className="mt-1 text-sm font-semibold">{topic.title}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : null}
       </section>
+
+      {(summaryTopics.length > 0 || rankingTopics.length > 0) ? (
+        <section className="mx-auto mt-8 w-full max-w-6xl grid gap-3 sm:grid-cols-2">
+          {summaryTopics.map((topic) => (
+            <Link
+              key={topic.id}
+              href={`/topics/${topic.slug}`}
+              className="group overflow-hidden rounded-3xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              <div className="relative h-28 overflow-hidden bg-accent-soft">
+                {getTopicCover(topic) ? (
+                  <img
+                    src={getTopicCover(topic) ?? ""}
+                    alt={topic.title}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
+                    Summary
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <p className="text-xs font-semibold text-muted">まとめ</p>
+                <p className="mt-1 text-sm font-semibold">{topic.title}</p>
+              </div>
+            </Link>
+          ))}
+          {rankingTopics.map((topic) => (
+            <Link
+              key={topic.id}
+              href={`/topics/${topic.slug}`}
+              className="group overflow-hidden rounded-3xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              <div className="relative h-28 overflow-hidden bg-accent-soft">
+                {getTopicCover(topic) ? (
+                  <img
+                    src={getTopicCover(topic) ?? ""}
+                    alt={topic.title}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
+                    Ranking
+                  </div>
+                )}
+              </div>
+              <div className="p-4">
+                <p className="text-xs font-semibold text-muted">ランキング</p>
+                <p className="mt-1 text-sm font-semibold">{topic.title}</p>
+              </div>
+            </Link>
+          ))}
+        </section>
+      ) : null}
 
       <section className="mx-auto mt-12 w-full max-w-6xl">
         <div className="flex items-center justify-between">
