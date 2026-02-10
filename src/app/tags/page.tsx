@@ -110,6 +110,35 @@ export default async function TagsPage({
             ))}
           </div>
         </section>
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold">クイックリンク</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Link
+              href="/works"
+              className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              作品一覧
+            </Link>
+            <Link
+              href="/topics"
+              className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              トピック一覧
+            </Link>
+            <Link
+              href="/genres"
+              className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              ジャンル一覧
+            </Link>
+            <Link
+              href="/makers"
+              className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              メーカー一覧
+            </Link>
+          </div>
+        </section>
         <div className="flex items-center justify-between text-xs text-muted">
           <span>
             {filtered.length}件中 {start + 1}-{Math.min(start + perPage, filtered.length)}件
