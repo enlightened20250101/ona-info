@@ -293,7 +293,7 @@ export default async function Home({
           </h2>
           <span className="text-xs text-muted">最新100件</span>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {visualArticles.map((article) => {
             const cover = article.type === "work" ? article.images?.[0]?.url : null;
             return (
@@ -306,10 +306,10 @@ export default async function Home({
                   <img
                     src={cover}
                     alt={article.title}
-                    className="h-40 w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                    className="h-36 w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                   />
                 ) : (
-                  <div className="flex h-40 items-center justify-center bg-accent-soft text-xs text-accent">
+                  <div className="flex h-36 items-center justify-center bg-accent-soft text-xs text-accent">
                     {article.type.toUpperCase()}
                   </div>
                 )}
