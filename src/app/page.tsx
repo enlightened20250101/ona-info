@@ -88,6 +88,10 @@ export default async function Home({
   const heroWorks = latestWorks.filter((work) => work.images[0]?.url).slice(0, 7);
   const visualWorks = latestWorks.slice(0, 12);
   const visualArticles = latestPage.slice(0, 12);
+  const miniRankingLines = rankingTopics[0]?.body
+    ?.split("\n")
+    .filter((line) => /^\d+\.\s/.test(line))
+    .slice(0, 5) ?? [];
   const workMap = new Map(latestWorks.map((work) => [work.slug, work]));
   const getTopicCover = (topic: Article) => {
     const relatedSlug = topic.related_works?.[0];
@@ -299,6 +303,30 @@ export default async function Home({
             </Link>
           ))}
         </div>
+        {miniRankingLines.length > 0 ? (
+          <div className="mt-6 rounded-3xl border border-border bg-white p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+                Mini Ranking
+              </p>
+              {rankingTopics[0] ? (
+                <Link
+                  href={`/topics/${rankingTopics[0].slug}`}
+                  className="text-xs font-semibold text-accent"
+                >
+                  詳細 →
+                </Link>
+              ) : null}
+            </div>
+            <div className="mt-3 grid gap-2 text-sm">
+              {miniRankingLines.map((line) => (
+                <span key={line} className="text-muted">
+                  {line}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="mx-auto mt-10 w-full max-w-6xl rounded-[32px] border border-border bg-card p-6">
