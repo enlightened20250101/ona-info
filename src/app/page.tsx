@@ -127,18 +127,46 @@ export default async function Home({
               トピックへ
             </Link>
           </div>
-          <form action="/search" method="get" className="mt-6 flex gap-2">
-            <input
-              name="q"
-              placeholder="検索"
-              className="flex-1 rounded-2xl border border-border bg-white px-4 py-3 text-sm"
-            />
-            <button
-              type="submit"
-              className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white"
-            >
-              Go
-            </button>
+          <form action="/search" method="get" className="mt-6 flex flex-col gap-3">
+            <div className="flex gap-2">
+              <input
+                name="q"
+                placeholder="作品番号・女優・#タグ"
+                className="flex-1 rounded-2xl border border-border bg-white px-4 py-3 text-sm"
+              />
+              <button
+                type="submit"
+                className="rounded-2xl bg-accent px-5 py-3 text-sm font-semibold text-white"
+              >
+                検索
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/search?q=SSIS"
+                className="rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted hover:border-accent/40"
+              >
+                作品番号
+              </Link>
+              <Link
+                href="/search?q=actress"
+                className="rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted hover:border-accent/40"
+              >
+                女優
+              </Link>
+              <Link
+                href="/search?q=%23新人"
+                className="rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted hover:border-accent/40"
+              >
+                #新人
+              </Link>
+              <Link
+                href="/search?q=%23独占"
+                className="rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted hover:border-accent/40"
+              >
+                #独占
+              </Link>
+            </div>
           </form>
           {popularTags.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-2">
