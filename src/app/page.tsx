@@ -370,28 +370,76 @@ export default async function Home({
             </Link>
           ))}
         </div>
-        {miniRankingLines.length > 0 ? (
-          <div className="mt-6 rounded-3xl border border-border bg-white p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-                Mini Ranking
-              </p>
-              {rankingTopics[0] ? (
-                <Link
-                  href={`/topics/${rankingTopics[0].slug}`}
-                  className="text-xs font-semibold text-accent"
-                >
-                  詳細 →
-                </Link>
-              ) : null}
-            </div>
-            <div className="mt-3 grid gap-2 text-sm">
-              {miniRankingLines.map((line) => (
-                <span key={line} className="text-muted">
-                  {line}
-                </span>
-              ))}
-            </div>
+        {(miniRankingLines.length > 0 || popularActresses.length > 0 || popularGenres.length > 0) ? (
+          <div className="mt-5 grid gap-3 rounded-3xl border border-border bg-white p-3 sm:grid-cols-2 lg:grid-cols-3">
+            {miniRankingLines.length > 0 ? (
+              <div className="rounded-2xl border border-border bg-card/70 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                    Ranking
+                  </p>
+                  {rankingTopics[0] ? (
+                    <Link
+                      href={`/topics/${rankingTopics[0].slug}`}
+                      className="text-[10px] font-semibold text-accent"
+                    >
+                      詳細 →
+                    </Link>
+                  ) : null}
+                </div>
+                <div className="mt-2 grid gap-1 text-xs text-muted">
+                  {miniRankingLines.map((line) => (
+                    <span key={line}>{line}</span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {popularActresses.length > 0 ? (
+              <div className="rounded-2xl border border-border bg-card/70 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                    Actresses
+                  </p>
+                  <Link href="/actresses/ranking" className="text-[10px] font-semibold text-accent">
+                    ランキング →
+                  </Link>
+                </div>
+                <div className="mt-2 grid gap-1 text-xs text-muted">
+                  {popularActresses.slice(0, 5).map((actress, index) => (
+                    <Link
+                      key={actress.slug}
+                      href={`/actresses/${actress.slug}`}
+                      className="truncate hover:text-foreground"
+                    >
+                      {index + 1}. {actress.slug}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {popularGenres.length > 0 ? (
+              <div className="rounded-2xl border border-border bg-card/70 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                    Genres
+                  </p>
+                  <Link href="/genres" className="text-[10px] font-semibold text-accent">
+                    一覧 →
+                  </Link>
+                </div>
+                <div className="mt-2 grid gap-1 text-xs text-muted">
+                  {popularGenres.slice(0, 5).map((tag, index) => (
+                    <Link
+                      key={tag}
+                      href={`/tags/${encodeURIComponent(tag)}`}
+                      className="truncate hover:text-foreground"
+                    >
+                      {index + 1}. {tagLabel(tag)}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </section>
