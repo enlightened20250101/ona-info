@@ -91,7 +91,9 @@ export default async function Home({
   return (
     <div className="min-h-screen px-6 pb-16 pt-10 sm:px-10">
       <header className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <div className="rounded-[32px] border border-border bg-card p-6 shadow-[0_35px_80px_-55px_rgba(0,0,0,0.45)] sm:p-8">
+        <div className="relative rounded-[32px] border border-border bg-card p-6 shadow-[0_35px_80px_-55px_rgba(0,0,0,0.45)] sm:p-8">
+          <div className="luxe-glow pointer-events-none absolute -left-12 -top-16 h-48 w-48 rounded-full bg-accent/20 blur-[80px]" />
+          <div className="luxe-glow pointer-events-none absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-foreground/10 blur-[80px]" />
           <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-[0.3em] text-muted">Auto Updates</p>
             <div className="rounded-full bg-accent-soft px-3 py-1 text-[11px] font-semibold text-accent">
@@ -105,7 +107,7 @@ export default async function Home({
           <div className="mt-6 flex flex-wrap gap-2">
             <Link
               href="/works"
-              className="rounded-full bg-foreground px-5 py-2 text-xs font-semibold text-white"
+              className="rounded-full bg-accent px-5 py-2 text-xs font-semibold text-white shadow-[0_10px_30px_-20px_rgba(0,0,0,0.6)] hover:bg-accent/90"
             >
               作品を見る
             </Link>
@@ -153,9 +155,9 @@ export default async function Home({
               <Link
                 key={work.id}
                 href={`/works/${work.slug}`}
-                className={`group relative overflow-hidden rounded-[28px] border border-border bg-white shadow-[0_20px_50px_-35px_rgba(0,0,0,0.45)] ${
+                className={`group relative overflow-hidden rounded-[28px] border border-border bg-white shadow-[0_20px_50px_-35px_rgba(0,0,0,0.45)] luxe-fade ${
                   index === 0 ? "col-span-2 row-span-2 min-h-[240px]" : "min-h-[140px]"
-                }`}
+                } ${index === 1 ? "luxe-delay-1" : index === 2 ? "luxe-delay-2" : index === 3 ? "luxe-delay-3" : index === 4 ? "luxe-delay-4" : index === 5 ? "luxe-delay-5" : ""}`}
               >
                 <img
                   src={work.images[0]?.url ?? ""}
