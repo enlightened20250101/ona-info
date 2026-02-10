@@ -92,6 +92,16 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
     );
   });
 
+  const relatedMetaTags = Array.from(
+    new Set(
+      popularWorks.flatMap((work) =>
+        extractMetaTagsFromBody(work.body).filter((tag) =>
+          tag.startsWith("genre:") || tag.startsWith("maker:")
+        )
+      )
+    )
+  ).slice(0, 8);
+
   const todayTopics = topics.filter((topic) => {
     const text = `${topic.title} ${topic.summary}`;
     return extractTags(text).includes(params.tag) || text.includes(keyword);
@@ -163,6 +173,23 @@ export default async function TagPage({ params }: { params: { tag: string } }) {
             </div>
           )}
         </section>
+
+        {relatedMetaTags.length > 0 ? (
+          <section className="rounded-3xl border border-border bg-card p-6">
+            <h2 className="text-lg font-semibold">関連ジャンル・メーカー</h2>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {relatedMetaTags.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/tags/${encodeURIComponent(tag)}`}
+                  className="rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-muted hover:border-accent/40"
+                >
+                  {tag.replace(/^genre:/, "ジャンル:").replace(/^maker:/, "メーカー:")}
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="rounded-3xl border border-border bg-card p-6">
           <h2 className="text-lg font-semibold">関連女優</h2>
