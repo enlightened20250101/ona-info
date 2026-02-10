@@ -200,16 +200,36 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
         {article.related_actresses.length > 0 ? (
           <section className="rounded-3xl border border-border bg-card p-6">
             <h2 className="text-lg font-semibold">関連女優</h2>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {article.related_actresses.map((slug) => (
-                <Link
-                  key={slug}
-                  href={`/actresses/${slug}`}
-                  className="rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-muted hover:border-accent/40"
-                >
-                  {slug}
-                </Link>
-              ))}
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {article.related_actresses.map((slug) => {
+                const cover = related.find((work) =>
+                  work.related_actresses.includes(slug)
+                )?.images?.[0]?.url;
+                return (
+                  <Link
+                    key={slug}
+                    href={`/actresses/${slug}`}
+                    className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
+                  >
+                    <div className="relative h-28 overflow-hidden bg-accent-soft">
+                      {cover ? (
+                        <img
+                          src={cover}
+                          alt={slug}
+                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
+                          Actress
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm font-semibold">{slug}</p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         ) : null}
@@ -217,15 +237,28 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
         {related.length > 0 ? (
           <section className="rounded-3xl border border-border bg-card p-6">
             <h2 className="text-lg font-semibold">同じ女優の作品</h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((work) => (
                 <Link
                   key={work.id}
                   href={`/works/${work.slug}`}
-                  className="rounded-2xl border border-border bg-white p-4 transition hover:-translate-y-1 hover:border-accent/40"
+                  className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
                 >
-                  <p className="text-xs text-muted">{work.slug}</p>
-                  <p className="mt-1 text-sm font-semibold">{work.title}</p>
+                  {work.images?.[0]?.url ? (
+                    <img
+                      src={work.images[0].url}
+                      alt={work.images[0].alt}
+                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
+                      No Image
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <p className="text-xs text-muted">{work.slug}</p>
+                    <p className="mt-1 text-sm font-semibold">{work.title}</p>
+                  </div>
                 </Link>
               ))}
             </div>
