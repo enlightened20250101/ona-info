@@ -67,10 +67,23 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
                 <Link
                   key={work.id}
                   href={`/works/${work.slug}`}
-                  className="rounded-2xl border border-border bg-card p-4 transition hover:-translate-y-1 hover:border-accent/40"
+                  className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent/40"
                 >
-                  <p className="text-xs text-muted">{work.slug}</p>
-                  <p className="mt-1 text-sm font-semibold">{work.title}</p>
+                  {work.images?.[0]?.url ? (
+                    <img
+                      src={work.images[0].url}
+                      alt={work.images[0].alt}
+                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
+                      No Image
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <p className="text-xs text-muted">{work.slug}</p>
+                    <p className="mt-1 text-sm font-semibold">{work.title}</p>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -85,10 +98,23 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
                 <Link
                   key={work.id}
                   href={`/works/${work.slug}`}
-                  className="rounded-2xl border border-border bg-white p-4 transition hover:-translate-y-1 hover:border-accent/40"
+                  className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
                 >
-                  <p className="text-xs text-muted">{work.slug}</p>
-                  <p className="mt-1 text-sm font-semibold">{work.title}</p>
+                  {work.images?.[0]?.url ? (
+                    <img
+                      src={work.images[0].url}
+                      alt={work.images[0].alt}
+                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
+                      No Image
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <p className="text-xs text-muted">{work.slug}</p>
+                    <p className="mt-1 text-sm font-semibold">{work.title}</p>
+                  </div>
                 </Link>
               ))}
             </div>
