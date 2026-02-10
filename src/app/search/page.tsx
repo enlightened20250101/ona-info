@@ -75,15 +75,32 @@ function sortResults(results: Article[], mode: string) {
   return results;
 }
 
+function orderResults(results: Article[], order: string) {
+  if (order === "oldest") {
+    return [...results].sort((a, b) => a.published_at.localeCompare(b.published_at));
+  }
+  if (order === "title") {
+    return [...results].sort((a, b) => a.title.localeCompare(b.title));
+  }
+  return [...results].sort((a, b) => b.published_at.localeCompare(a.published_at));
+}
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; type?: string; page?: string; perPage?: string; limit?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    type?: string;
+    order?: string;
+    page?: string;
+    perPage?: string;
+    limit?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const query = normalizeQuery(sp.q ?? "");
   const mode = sp.type ?? "all";
+  const order = sp.order ?? "newest";
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
   const perPage = Math.min(50, Math.max(5, Number(sp.perPage ?? "20") || 20));
   const limit = Math.min(1000, Math.max(50, Number(sp.limit ?? "200") || 200));
@@ -104,7 +121,7 @@ export default async function SearchPage({
       })
     : [];
 
-  const sorted = sortResults(results, mode);
+  const sorted = orderResults(sortResults(results, mode), order);
   const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * perPage;
@@ -112,6 +129,7 @@ export default async function SearchPage({
   const baseParams = new URLSearchParams();
   if (sp.q) baseParams.set("q", sp.q);
   if (sp.type) baseParams.set("type", sp.type);
+  if (sp.order) baseParams.set("order", sp.order);
   if (sp.perPage) baseParams.set("perPage", sp.perPage);
   if (sp.limit) baseParams.set("limit", sp.limit);
 
@@ -156,10 +174,29 @@ export default async function SearchPage({
             ].map((item) => (
               <Link
                 key={item.key}
-                href={`/search?q=${encodeURIComponent(sp.q ?? "")}&type=${item.key}`}
+                href={`/search?q=${encodeURIComponent(sp.q ?? "")}&type=${item.key}&order=${encodeURIComponent(order)}`}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   mode === item.key
                     ? "bg-accent text-white"
+                    : "border border-border bg-white text-muted hover:border-accent/40"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[
+              { key: "newest", label: "新着順" },
+              { key: "oldest", label: "古い順" },
+              { key: "title", label: "タイトル順" },
+            ].map((item) => (
+              <Link
+                key={item.key}
+                href={`/search?q=${encodeURIComponent(sp.q ?? "")}&type=${encodeURIComponent(mode)}&order=${item.key}`}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  order === item.key
+                    ? "bg-foreground text-white"
                     : "border border-border bg-white text-muted hover:border-accent/40"
                 }`}
               >
