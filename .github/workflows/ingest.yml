@@ -1,0 +1,44 @@
+name: ingest
+
+on:
+  schedule:
+    - cron: "15 23 * * *" # JST 8:15
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run ingest
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DMM_API_ID: ${{ secrets.DMM_API_ID }}
+          DMM_AFFILIATE_ID: ${{ secrets.DMM_AFFILIATE_ID }}
+          DMM_SITE: FANZA
+          DMM_SERVICE: digital
+          DMM_FLOOR: videoa
+          DMM_HITS_PER_RUN: "3"
+          DMM_SORT: date
+          DMM_AFFILIATE_URL_TEMPLATE: ${{ secrets.DMM_AFFILIATE_URL_TEMPLATE }}
+          RSS_FEEDS: ${{ secrets.RSS_FEEDS }}
+          RSS_MAX_ITEMS_PER_FEED: "5"
+          FETCH_RETRIES: "2"
+          FETCH_TIMEOUT_MS: "8000"
+          FETCH_BACKOFF_MS: "800"
+          NOTIFY_WEBHOOK_URL: ${{ secrets.NOTIFY_WEBHOOK_URL }}
+          PUBLISH_WINDOW_START: "9"
+          PUBLISH_WINDOW_END: "23"
+          TOPIC_DAILY_COUNT: "26"
+          TOPIC_SEED: "2026-02-09"
+          RANKING_SEED: "2026-02-09"
+          SUMMARY_WEEKLY_KEY: "2026-02-09"
+          SUMMARY_MONTHLY_KEY: "2026-02"
+          SITE_URL: ${{ secrets.SITE_URL }}
