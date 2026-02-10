@@ -6,14 +6,22 @@ import { buildPagination } from "@/lib/pagination";
 import { getLatestArticles } from "@/lib/db";
 import SearchHistoryClient from "@/app/search/SearchHistoryClient";
 import { Article } from "@/lib/schema";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "検索 | AV Info Lab",
+  title: `検索 | ${SITE.name}`,
   description: "作品番号・女優・タグで検索できます。",
+  alternates: {
+    canonical: `${SITE.url.replace(/\/$/, "")}/search`,
+  },
+  robots: {
+    index: false,
+    follow: true,
+  },
   openGraph: {
-    title: "検索 | AV Info Lab",
+    title: `検索 | ${SITE.name}`,
     description: "作品番号・女優・タグで検索できます。",
     type: "website",
   },

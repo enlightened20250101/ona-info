@@ -3,14 +3,18 @@ import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
 import { getLatestByType } from "@/lib/db";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "作品一覧 | AV Info Lab",
+  title: `作品一覧 | ${SITE.name}`,
   description: "最新の作品一覧。",
+  alternates: {
+    canonical: `${SITE.url.replace(/\/$/, "")}/works`,
+  },
   openGraph: {
-    title: "作品一覧 | AV Info Lab",
+    title: `作品一覧 | ${SITE.name}`,
     description: "最新の作品一覧。",
     type: "website",
   },

@@ -4,14 +4,18 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
 import { getLatestByType } from "@/lib/db";
 import { Article } from "@/lib/schema";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "女優一覧 | AV Info Lab",
+  title: `女優一覧 | ${SITE.name}`,
   description: "出演女優の一覧。",
+  alternates: {
+    canonical: `${SITE.url.replace(/\/$/, "")}/actresses`,
+  },
   openGraph: {
-    title: "女優一覧 | AV Info Lab",
+    title: `女優一覧 | ${SITE.name}`,
     description: "出演女優の一覧。",
     type: "website",
   },

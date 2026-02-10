@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { extractMetaTagsFromBody, extractTags, tagKeywords, tagLabel } from "@/lib/tagging";
 import { findWorksByActressSlug, getArticleBySlug } from "@/lib/db";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -48,18 +49,22 @@ export async function generateMetadata({
 
   if (!article) {
     return {
-      title: "作品が見つかりません | AV Info Lab",
+      title: `作品が見つかりません | ${SITE.name}`,
       description: "指定された作品は見つかりませんでした。",
     };
   }
 
   return {
-    title: `${article.title} (${article.slug}) | AV Info Lab`,
+    title: `${article.title} (${article.slug}) | ${SITE.name}`,
     description: article.summary,
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/works/${article.slug}`,
+    },
     openGraph: {
-      title: `${article.title} (${article.slug}) | AV Info Lab`,
+      title: `${article.title} (${article.slug}) | ${SITE.name}`,
       description: article.summary,
       type: "article",
+      images: article.images?.[0]?.url ? [{ url: article.images[0].url }] : undefined,
     },
   };
 }
@@ -88,9 +93,32 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
   ];
   const keywordPool = tags.flatMap(tagKeywords);
   const metaTags = extractMetaTagsFromBody(article.body);
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: article.title,
+    description: article.summary,
+    datePublished: article.published_at,
+    dateModified: article.fetched_at,
+    mainEntityOfPage: `${SITE.url.replace(/\/$/, "")}/works/${article.slug}`,
+    image: article.images?.[0]?.url ? [article.images[0].url] : undefined,
+    author: {
+      "@type": "Organization",
+      name: SITE.name,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: SITE.name,
+    },
+  };
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
         <Breadcrumbs
           items={[

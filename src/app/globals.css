@@ -28,6 +28,56 @@ body {
   font-family: var(--font-space-grotesk), system-ui, sans-serif;
 }
 
+@keyframes luxeFloat {
+  0% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes luxeGlow {
+  0% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0.75;
+    transform: translateY(-12px);
+  }
+}
+
+.luxe-fade {
+  animation: luxeFloat 0.9s ease-out both;
+}
+
+.luxe-delay-1 {
+  animation-delay: 0.08s;
+}
+
+.luxe-delay-2 {
+  animation-delay: 0.16s;
+}
+
+.luxe-delay-3 {
+  animation-delay: 0.24s;
+}
+
+.luxe-delay-4 {
+  animation-delay: 0.32s;
+}
+
+.luxe-delay-5 {
+  animation-delay: 0.4s;
+}
+
+.luxe-glow {
+  animation: luxeGlow 6s ease-in-out infinite alternate;
+}
+
 a {
   color: inherit;
   text-decoration: none;

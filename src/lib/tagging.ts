@@ -61,6 +61,7 @@ export function extractMetaTagsFromBody(body: string) {
 }
 
 export function tagLabel(tag: string) {
+  if (!tag) return "";
   if (tag.startsWith("maker:")) return `メーカー:${tag.replace("maker:", "")}`;
   if (tag.startsWith("genre:")) return `ジャンル:${tag.replace("genre:", "")}`;
   const labels: Record<string, string> = {
@@ -83,10 +84,12 @@ export function tagLabel(tag: string) {
 }
 
 export function tagSummary(tag: string) {
+  if (!tag) return "関連作品やトピックをまとめたタグです。";
   return TAG_SUMMARIES[tag] ?? "関連作品やトピックをまとめたタグです。";
 }
 
 export function tagKeywords(tag: string) {
+  if (!tag) return [];
   if (tag.startsWith("maker:")) return [tag.replace("maker:", "")];
   if (tag.startsWith("genre:")) return [tag.replace("genre:", "")];
   return TAG_MAP[tag] ?? [];

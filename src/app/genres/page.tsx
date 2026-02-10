@@ -5,14 +5,18 @@ import { buildPagination } from "@/lib/pagination";
 import { extractMetaTagsFromBody, tagLabel } from "@/lib/tagging";
 import { getLatestByType } from "@/lib/db";
 import { Article } from "@/lib/schema";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "ジャンル一覧 | AV Info Lab",
+  title: `ジャンル一覧 | ${SITE.name}`,
   description: "作品から抽出したジャンル一覧。",
+  alternates: {
+    canonical: `${SITE.url.replace(/\/$/, "")}/genres`,
+  },
   openGraph: {
-    title: "ジャンル一覧 | AV Info Lab",
+    title: `ジャンル一覧 | ${SITE.name}`,
     description: "作品から抽出したジャンル一覧。",
     type: "website",
   },

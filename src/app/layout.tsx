@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: SITE.name,
   description: SITE.description,
   metadataBase: new URL(SITE.url),
+  alternates: {
+    canonical: SITE.url,
+  },
   openGraph: {
     title: SITE.name,
     description: SITE.description,
@@ -33,12 +36,41 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const siteUrl = SITE.url.replace(/\/$/, "");
+  const webSiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE.name,
+    url: siteUrl,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${siteUrl}/search?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE.name,
+    url: siteUrl,
+  };
+
   return (
     <html lang="ja">
       <body className={`${spaceGrotesk.variable} ${plexMono.variable} antialiased`}>
         <MobileNav />
         {children}
         <Footer />
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
       </body>
     </html>
   );

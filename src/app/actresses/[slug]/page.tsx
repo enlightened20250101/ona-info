@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { findWorksByActressSlug } from "@/lib/db";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +13,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   return {
-    title: `${slug} | 女優ページ | AV Info Lab`,
+    title: `${slug} | 女優ページ | ${SITE.name}`,
     description: `${slug}の関連作品一覧。`,
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/actresses/${slug}`,
+    },
     openGraph: {
-      title: `${slug} | 女優ページ | AV Info Lab`,
+      title: `${slug} | 女優ページ | ${SITE.name}`,
       description: `${slug}の関連作品一覧。`,
       type: "profile",
     },

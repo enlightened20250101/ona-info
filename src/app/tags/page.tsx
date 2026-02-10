@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
 import { tagLabel } from "@/lib/tagging";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +25,13 @@ const TAGS = [
 ];
 
 export const metadata: Metadata = {
-  title: "タグ一覧 | AV Info Lab",
+  title: `タグ一覧 | ${SITE.name}`,
   description: "タグ一覧。",
+  alternates: {
+    canonical: `${SITE.url.replace(/\/$/, "")}/tags`,
+  },
   openGraph: {
-    title: "タグ一覧 | AV Info Lab",
+    title: `タグ一覧 | ${SITE.name}`,
     description: "タグ一覧。",
     type: "website",
   },

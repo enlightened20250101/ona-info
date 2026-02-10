@@ -1,8 +1,13 @@
 import { Metadata } from "next";
 
+import { SITE } from "@/lib/site";
+
 export const metadata: Metadata = {
-  title: "プライバシーポリシー | AV Info Lab",
+  title: `プライバシーポリシー | ${SITE.name}`,
   description: "個人情報の取り扱いについて。",
+  alternates: {
+    canonical: `${SITE.url.replace(/\/$/, "")}/privacy`,
+  },
 };
 
 export default function PrivacyPage() {

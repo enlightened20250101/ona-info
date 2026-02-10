@@ -5,6 +5,7 @@ import { buildTrend } from "@/lib/analytics";
 import { extractMetaTagsFromBody, extractTags, tagLabel, tagSummary } from "@/lib/tagging";
 import { getLatestArticles, getLatestByType } from "@/lib/db";
 import { Article } from "@/lib/schema";
+import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +15,13 @@ export async function generateMetadata({
   params: { tag: string };
 }): Promise<Metadata> {
   return {
-    title: `#${tagLabel(params.tag)} | タグ | AV Info Lab`,
+    title: `#${tagLabel(params.tag)} | タグ | ${SITE.name}`,
     description: `タグ「${tagLabel(params.tag)}」に関連する記事一覧。`,
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/tags/${params.tag}`,
+    },
     openGraph: {
-      title: `#${tagLabel(params.tag)} | タグ | AV Info Lab`,
+      title: `#${tagLabel(params.tag)} | タグ | ${SITE.name}`,
       description: `タグ「${tagLabel(params.tag)}」に関連する記事一覧。`,
       type: "website",
     },

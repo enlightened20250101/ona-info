@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SITE } from "@/lib/site";
 
-const DMM_CREDIT_TEXT = "Powered by FANZA Webサービス";
+const DMM_CREDIT_TEXT = "Powered by";
 const DMM_CREDIT_URL = "https://affiliate.dmm.com/api/";
 
 export default function Footer() {

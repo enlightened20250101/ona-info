@@ -1,8 +1,13 @@
 import { Metadata } from "next";
 
+import { SITE } from "@/lib/site";
+
 export const metadata: Metadata = {
-  title: "お問い合わせ | AV Info Lab",
+  title: `お問い合わせ | ${SITE.name}`,
   description: "お問い合わせはこちらから。",
+  alternates: {
+    canonical: `${SITE.url.replace(/\/$/, "")}/contact`,
+  },
 };
 
 export default function ContactPage() {

@@ -2,8 +2,11 @@ import { Metadata } from "next";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "会社情報 | AV Info Lab",
+  title: `会社情報 | ${SITE.name}`,
   description: "運営情報はこちら。",
+  alternates: {
+    canonical: `${SITE.url.replace(/\/$/, "")}/company`,
+  },
 };
 
 export default function CompanyPage() {
@@ -23,7 +26,7 @@ export default function CompanyPage() {
             </div>
             <div>
               <dt className="text-xs text-muted">運営者</dt>
-              <dd className="mt-1 font-semibold">AV Info Lab 編集部</dd>
+              <dd className="mt-1 font-semibold">{SITE.name} 編集部</dd>
             </div>
             <div>
               <dt className="text-xs text-muted">連絡先</dt>
