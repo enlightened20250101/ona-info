@@ -370,7 +370,7 @@ export default async function Home({
             </Link>
           ))}
         </div>
-        {(miniRankingLines.length > 0 || popularActresses.length > 0 || popularGenres.length > 0) ? (
+        {(miniRankingLines.length > 0 || popularActresses.length > 0 || popularGenres.length > 0 || popularTags.length > 0) ? (
           <div className="mt-5 grid gap-3 rounded-3xl border border-border bg-white p-3 sm:grid-cols-2 lg:grid-cols-3">
             {miniRankingLines.length > 0 ? (
               <div className="rounded-2xl border border-border bg-card/70 p-3">
@@ -395,7 +395,7 @@ export default async function Home({
               </div>
             ) : null}
             {popularActresses.length > 0 ? (
-              <div className="rounded-2xl border border-border bg-card/70 p-3">
+              <div className="rounded-2xl border border-border bg-card/70 p-3 sm:col-span-2">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
                     Actresses
@@ -404,8 +404,8 @@ export default async function Home({
                     ランキング →
                   </Link>
                 </div>
-                <div className="mt-2 grid gap-1 text-xs text-muted">
-                  {popularActresses.slice(0, 5).map((actress, index) => (
+                <div className="mt-2 grid gap-1 text-xs text-muted sm:grid-cols-2">
+                  {popularActresses.slice(0, 10).map((actress, index) => (
                     <Link
                       key={actress.slug}
                       href={`/actresses/${actress.slug}`}
@@ -435,6 +435,29 @@ export default async function Home({
                       className="truncate hover:text-foreground"
                     >
                       {index + 1}. {tagLabel(tag)}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {popularTags.length > 0 ? (
+              <div className="rounded-2xl border border-border bg-card/70 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                    Tags
+                  </p>
+                  <Link href="/tags" className="text-[10px] font-semibold text-accent">
+                    一覧 →
+                  </Link>
+                </div>
+                <div className="mt-2 grid gap-1 text-xs text-muted">
+                  {popularTags.slice(0, 5).map((tag, index) => (
+                    <Link
+                      key={tag}
+                      href={`/tags/${tag}`}
+                      className="truncate hover:text-foreground"
+                    >
+                      {index + 1}. #{tagLabel(tag)}
                     </Link>
                   ))}
                 </div>
