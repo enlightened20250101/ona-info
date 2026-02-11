@@ -103,6 +103,22 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
       return topicTags.some((tag) => baseTags.includes(tag));
     })
     .slice(0, 4);
+  const sameGenre = metaTags.find((tag) => tag.startsWith("genre:"));
+  const sameGenreWorks = sameGenre
+    ? (await getLatestByType("work", 160))
+        .filter(
+          (work) =>
+            work.slug !== article.slug && work.body.includes(sameGenre.replace("genre:", ""))
+        )
+        .slice(0, 6)
+    : [];
+  const fallbackWorks = (await getLatestByType("work", 80))
+    .filter(
+      (work) =>
+        work.slug !== article.slug &&
+        !sameGenreWorks.some((picked) => picked.slug === work.slug)
+    )
+    .slice(0, 6);
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -298,6 +314,68 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
                   </Link>
                 );
               })}
+            </div>
+          </section>
+        ) : null}
+
+        {sameGenreWorks.length > 0 ? (
+          <section className="rounded-3xl border border-border bg-card p-6">
+            <h2 className="text-lg font-semibold">同ジャンルの作品</h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {sameGenreWorks.map((work) => (
+                <Link
+                  key={work.id}
+                  href={`/works/${work.slug}`}
+                  className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
+                >
+                  {work.images?.[0]?.url ? (
+                    <img
+                      src={work.images[0].url}
+                      alt={work.images[0].alt}
+                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
+                      No Image
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <p className="text-xs text-muted">{work.slug}</p>
+                    <p className="mt-1 text-sm font-semibold">{work.title}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {fallbackWorks.length > 0 ? (
+          <section className="rounded-3xl border border-border bg-card p-6">
+            <h2 className="text-lg font-semibold">あなたにおすすめ</h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {fallbackWorks.map((work) => (
+                <Link
+                  key={work.id}
+                  href={`/works/${work.slug}`}
+                  className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
+                >
+                  {work.images?.[0]?.url ? (
+                    <img
+                      src={work.images[0].url}
+                      alt={work.images[0].alt}
+                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                  ) : (
+                    <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
+                      No Image
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <p className="text-xs text-muted">{work.slug}</p>
+                    <p className="mt-1 text-sm font-semibold">{work.title}</p>
+                  </div>
+                </Link>
+              ))}
             </div>
           </section>
         ) : null}
