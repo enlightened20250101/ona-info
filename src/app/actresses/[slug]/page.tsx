@@ -148,6 +148,8 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
                     <img
                       src={work.images[0].url}
                       alt={work.images[0].alt}
+                      loading="lazy"
+                      decoding="async"
                       className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                     />
                   ) : (
@@ -179,6 +181,8 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
                     <img
                       src={work.images[0].url}
                       alt={work.images[0].alt}
+                      loading="lazy"
+                      decoding="async"
                       className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                     />
                   ) : (

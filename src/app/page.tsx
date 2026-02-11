@@ -226,6 +226,8 @@ export default async function Home({
                 <img
                   src={work.images[0]?.url ?? ""}
                   alt={work.images[0]?.alt ?? work.title}
+                  loading={index < 2 ? "eager" : "lazy"}
+                  decoding="async"
                   className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent opacity-90" />
@@ -307,10 +309,12 @@ export default async function Home({
                 className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
               >
                 <div className="relative h-24 overflow-hidden bg-accent-soft">
-                  {actress.image ? (
+                {actress.image ? (
                     <img
                       src={actress.image}
                       alt={actress.slug}
+                      loading="lazy"
+                      decoding="async"
                       className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                     />
                   ) : (
@@ -355,6 +359,8 @@ export default async function Home({
                   <img
                     src={work.images[0].url}
                     alt={work.images[0].alt}
+                    loading="lazy"
+                    decoding="async"
                     className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                   />
                 ) : (
@@ -490,11 +496,13 @@ export default async function Home({
             >
               <div className="relative h-28 overflow-hidden bg-accent-soft">
                 {getTopicCover(topic) ? (
-                  <img
-                    src={getTopicCover(topic) ?? ""}
-                    alt={topic.title}
-                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                  />
+                    <img
+                      src={getTopicCover(topic) ?? ""}
+                      alt={topic.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
                 ) : (
                   <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
                     Topic
@@ -526,6 +534,8 @@ export default async function Home({
                   <img
                     src={getTopicCover(topic) ?? ""}
                     alt={topic.title}
+                    loading="lazy"
+                    decoding="async"
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                   />
                 ) : (
@@ -551,6 +561,8 @@ export default async function Home({
                   <img
                     src={getTopicCover(topic) ?? ""}
                     alt={topic.title}
+                    loading="lazy"
+                    decoding="async"
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                   />
                 ) : (
@@ -588,6 +600,8 @@ export default async function Home({
                   <img
                     src={cover}
                     alt={article.title}
+                    loading="lazy"
+                    decoding="async"
                     className="h-36 w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                   />
                 ) : (

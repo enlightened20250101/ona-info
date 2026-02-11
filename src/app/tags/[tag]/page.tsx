@@ -239,6 +239,8 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
                     <img
                       src={work.images[0].url}
                       alt={work.images[0].alt}
+                      loading="lazy"
+                      decoding="async"
                       className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                     />
                   ) : (
@@ -327,6 +329,8 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
                       <img
                         src={topic.images[0].url}
                         alt={topic.images[0].alt}
+                        loading="lazy"
+                        decoding="async"
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                       />
                     ) : (
@@ -362,6 +366,8 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
                       <img
                         src={article.images[0].url}
                         alt={article.title}
+                        loading="lazy"
+                        decoding="async"
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                       />
                     ) : (

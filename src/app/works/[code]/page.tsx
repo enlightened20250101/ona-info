@@ -264,6 +264,8 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
                     key={image.url}
                     src={image.url}
                     alt={image.alt}
+                    loading="lazy"
+                    decoding="async"
                     className="h-48 w-full rounded-2xl object-cover"
                   />
                 ))
@@ -325,6 +327,8 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
                         <img
                           src={cover}
                           alt={slug}
+                          loading="lazy"
+                          decoding="async"
                           className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                         />
                       ) : (
@@ -357,6 +361,8 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
                     <img
                       src={work.images[0].url}
                       alt={work.images[0].alt}
+                      loading="lazy"
+                      decoding="async"
                       className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                     />
                   ) : (
@@ -388,6 +394,8 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
                     <img
                       src={work.images[0].url}
                       alt={work.images[0].alt}
+                      loading="lazy"
+                      decoding="async"
                       className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                     />
                   ) : (
@@ -419,6 +427,8 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
                     <img
                       src={work.images[0].url}
                       alt={work.images[0].alt}
+                      loading="lazy"
+                      decoding="async"
                       className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                     />
                   ) : (
