@@ -50,6 +50,32 @@ body {
   }
 }
 
+.pressable,
+a.group {
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  will-change: transform;
+}
+
+.pressable:active,
+a.group:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+@keyframes skeleton {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f1e9e4, #f8f2ee, #f1e9e4);
+  background-size: 200% 200%;
+  animation: skeleton 1.2s ease-in-out infinite;
+}
+
 .luxe-fade {
   animation: luxeFloat 0.9s ease-out both;
 }
