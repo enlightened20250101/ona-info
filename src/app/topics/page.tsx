@@ -8,14 +8,14 @@ import { SITE } from "@/lib/site";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: `トピック一覧 | ${SITE.name}`,
-  description: "最新のトピック一覧。",
+  title: `エロ動画トピック | ${SITE.name}`,
+  description: "最新のエロ動画トピック一覧。話題の配信や人気キーワードをチェック。",
   alternates: {
     canonical: `${SITE.url.replace(/\/$/, "")}/topics`,
   },
   openGraph: {
-    title: `トピック一覧 | ${SITE.name}`,
-    description: "最新のトピック一覧。",
+    title: `エロ動画トピック | ${SITE.name}`,
+    description: "最新のエロ動画トピック一覧。話題の配信や人気キーワードをチェック。",
     type: "website",
   },
 };
@@ -48,9 +48,20 @@ export default async function TopicsPage({
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "トピック一覧",
+    name: "エロ動画トピック",
     url: `${base}/topics`,
-    description: "最新のトピック一覧。",
+    description: "最新のエロ動画トピック一覧。話題の配信や人気キーワードをチェック。",
+  };
+  const listLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "最新トピック",
+    itemListElement: pageItems.slice(0, 12).map((topic, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: `${base}/topics/${topic.slug}`,
+      name: topic.title,
+    })),
   };
 
   return (
@@ -59,6 +70,11 @@ export default async function TopicsPage({
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(listLd) }}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <Breadcrumbs
@@ -69,8 +85,10 @@ export default async function TopicsPage({
         />
         <header className="rounded-3xl border border-border bg-card p-6">
           <p className="text-xs text-muted">topics</p>
-          <h1 className="mt-2 text-3xl font-semibold">トピック一覧</h1>
-          <p className="mt-2 text-sm text-muted">日次で生成されたトピックを一覧表示します。</p>
+          <h1 className="mt-2 text-3xl font-semibold">エロ動画トピック</h1>
+          <p className="mt-2 text-sm text-muted">
+            日次で生成されたトピックを一覧表示します。話題の配信・人気キーワードをチェック。
+          </p>
           <form action="/topics" method="get" className="mt-4 flex gap-2">
             <input
               name="q"

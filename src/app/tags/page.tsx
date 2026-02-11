@@ -25,14 +25,14 @@ const TAGS = [
 ];
 
 export const metadata: Metadata = {
-  title: `タグ一覧 | ${SITE.name}`,
-  description: "タグ一覧。",
+  title: `タグ一覧・エロ動画 | ${SITE.name}`,
+  description: "タグ一覧。エロ動画・作品の話題タグから探せます。",
   alternates: {
     canonical: `${SITE.url.replace(/\/$/, "")}/tags`,
   },
   openGraph: {
-    title: `タグ一覧 | ${SITE.name}`,
-    description: "タグ一覧。",
+    title: `タグ一覧・エロ動画 | ${SITE.name}`,
+    description: "タグ一覧。エロ動画・作品の話題タグから探せます。",
     type: "website",
   },
 };
@@ -60,9 +60,20 @@ export default async function TagsPage({
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "タグ一覧",
+    name: "タグ一覧・エロ動画",
     url: `${base}/tags`,
-    description: "サイト内で利用しているタグ一覧。",
+    description: "サイト内で利用しているタグ一覧。エロ動画・作品の話題タグから探せます。",
+  };
+  const listLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "人気タグ",
+    itemListElement: pageItems.slice(0, 12).map((tag, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: `${base}/tags/${tag}`,
+      name: tagLabel(tag),
+    })),
   };
 
 
@@ -72,6 +83,11 @@ export default async function TagsPage({
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(listLd) }}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <Breadcrumbs
@@ -83,7 +99,9 @@ export default async function TagsPage({
         <header className="rounded-3xl border border-border bg-card p-6">
           <p className="text-xs text-muted">tags</p>
           <h1 className="mt-2 text-3xl font-semibold">タグ一覧</h1>
-          <p className="mt-2 text-sm text-muted">サイト内で利用しているタグ一覧。</p>
+          <p className="mt-2 text-sm text-muted">
+            エロ動画・作品の話題タグから探せます。サイト内で利用しているタグ一覧です。
+          </p>
           <form action="/tags" method="get" className="mt-4 flex gap-2">
             <input
               name="q"

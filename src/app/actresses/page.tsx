@@ -9,14 +9,14 @@ import { SITE } from "@/lib/site";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: `女優一覧 | ${SITE.name}`,
-  description: "出演女優の一覧。",
+  title: `女優一覧・エロ動画 | ${SITE.name}`,
+  description: "出演女優の一覧。女優名からエロ動画・出演作品を探せます。",
   alternates: {
     canonical: `${SITE.url.replace(/\/$/, "")}/actresses`,
   },
   openGraph: {
-    title: `女優一覧 | ${SITE.name}`,
-    description: "出演女優の一覧。",
+    title: `女優一覧・エロ動画 | ${SITE.name}`,
+    description: "出演女優の一覧。女優名からエロ動画・出演作品を探せます。",
     type: "website",
   },
 };
@@ -54,9 +54,20 @@ export default async function ActressesPage({
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "女優一覧",
+    name: "女優一覧・エロ動画",
     url: `${base}/actresses`,
-    description: "出演女優の一覧。",
+    description: "出演女優の一覧。女優名からエロ動画・出演作品を探せます。",
+  };
+  const listLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "人気の女優",
+    itemListElement: pageItems.slice(0, 12).map((name, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: `${base}/actresses/${encodeURIComponent(name)}`,
+      name,
+    })),
   };
 
   return (
@@ -65,6 +76,11 @@ export default async function ActressesPage({
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(listLd) }}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <Breadcrumbs
@@ -76,7 +92,9 @@ export default async function ActressesPage({
         <header className="rounded-3xl border border-border bg-card p-6">
           <p className="text-xs text-muted">actresses</p>
           <h1 className="mt-2 text-3xl font-semibold">女優一覧</h1>
-          <p className="mt-2 text-sm text-muted">作品から抽出した女優一覧。</p>
+          <p className="mt-2 text-sm text-muted">
+            女優名からエロ動画・出演作品を探せます。作品から抽出した女優一覧です。
+          </p>
           <form action="/actresses" method="get" className="mt-4 flex gap-2">
             <input
               name="q"
