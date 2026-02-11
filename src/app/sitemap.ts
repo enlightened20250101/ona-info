@@ -15,18 +15,17 @@ export default async function sitemap({ id }: { id: number }): Promise<MetadataR
   const now = new Date();
   const base = SITE.url.replace(/\/$/, "");
   const staticRoutes = [
-    "",
-    "/works",
-    "/topics",
-    "/actresses",
-    "/tags",
-    "/search",
-    "/makers",
-    "/genres",
-    "/contact",
-    "/company",
-    "/privacy",
-    "/actresses/ranking",
+    { route: "", priority: 1, changeFrequency: "daily" as const },
+    { route: "/works", priority: 0.9, changeFrequency: "daily" as const },
+    { route: "/topics", priority: 0.8, changeFrequency: "daily" as const },
+    { route: "/actresses", priority: 0.85, changeFrequency: "weekly" as const },
+    { route: "/tags", priority: 0.75, changeFrequency: "weekly" as const },
+    { route: "/makers", priority: 0.6, changeFrequency: "weekly" as const },
+    { route: "/genres", priority: 0.6, changeFrequency: "weekly" as const },
+    { route: "/contact", priority: 0.4, changeFrequency: "monthly" as const },
+    { route: "/company", priority: 0.4, changeFrequency: "monthly" as const },
+    { route: "/privacy", priority: 0.3, changeFrequency: "yearly" as const },
+    { route: "/actresses/ranking", priority: 0.7, changeFrequency: "daily" as const },
   ];
 
   const articles = await getLatestArticles(MAX_ARTICLES);
@@ -34,27 +33,24 @@ export default async function sitemap({ id }: { id: number }): Promise<MetadataR
   const pageItems = articles.slice(start, start + SITEMAP_PAGE_SIZE);
 
   const dynamicRoutes = pageItems.map((article) => {
-    const prefix =
-      article.type === "work"
-        ? "works"
-        : article.type === "actress"
-          ? "actresses"
-          : "topics";
+    const isWork = article.type === "work";
+    const isActress = article.type === "actress";
+    const prefix = isWork ? "works" : isActress ? "actresses" : "topics";
     return {
       url: `${base}/${prefix}/${article.slug}`,
       lastModified: article.published_at ?? now.toISOString(),
-      changeFrequency: "daily" as const,
-      priority: 0.6,
+      changeFrequency: isWork ? ("daily" as const) : isActress ? ("weekly" as const) : ("daily" as const),
+      priority: isWork ? 0.8 : isActress ? 0.65 : 0.7,
     };
   });
 
   const staticEntries =
     id === 0
-      ? staticRoutes.map((route) => ({
-          url: `${base}${route}`,
+      ? staticRoutes.map((entry) => ({
+          url: `${base}${entry.route}`,
           lastModified: now.toISOString(),
-          changeFrequency: "daily" as const,
-          priority: route === "" ? 1 : 0.7,
+          changeFrequency: entry.changeFrequency,
+          priority: entry.priority,
         }))
       : [];
 
