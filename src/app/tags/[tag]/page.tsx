@@ -126,6 +126,36 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
       name: work.title,
     })),
   };
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: `#${keyword}のエロ動画はどこで見られますか？`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `#${keyword}の関連作品は本ページにまとめています。作品ページから配信先へ進めます。`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `#${keyword}の最新作品は？`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `#${keyword}の最新作品は「人気作品」や「今日のトピック」で確認できます。`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `#${keyword}に関連する女優は？`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `関連女優の一覧を本ページに掲載しています。`,
+        },
+      },
+    ],
+  };
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
@@ -138,6 +168,11 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <Breadcrumbs

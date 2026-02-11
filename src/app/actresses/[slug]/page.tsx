@@ -55,6 +55,43 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
   const recommendedWorks = latestWorks
     .filter((work) => work.related_actresses.includes(slug))
     .slice(0, 6);
+  const relatedTagsFromWorks = Array.from(
+    new Set(
+      works.flatMap((work) =>
+        extractMetaTagsFromBody(work.body).filter((tag) => tag.startsWith("genre:"))
+      )
+    )
+  ).slice(0, 8);
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: `${slug}のエロ動画はどこで見られますか？`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${slug}の出演作品は本ページにまとめています。各作品ページから配信先へ進めます。`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `${slug}の最新作は？`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${slug}の最新作は「関連作品」欄に新しい順で表示しています。`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `${slug}の出演ジャンルは？`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${slug}の出演ジャンルは「関連ジャンル」から確認できます。`,
+        },
+      },
+    ],
+  };
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
@@ -63,6 +100,11 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
+        />
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
         />
         <Breadcrumbs
           items={[
@@ -147,6 +189,23 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
             <h2 className="text-lg font-semibold">関連ジャンル</h2>
             <div className="mt-4 flex flex-wrap gap-2">
               {relatedTags.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/tags/${encodeURIComponent(tag)}`}
+                  className="rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-muted hover:border-accent/40"
+                >
+                  {tag.replace("genre:", "")}
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {relatedTagsFromWorks.length > 0 ? (
+          <section className="rounded-3xl border border-border bg-card p-6">
+            <h2 className="text-lg font-semibold">人気ジャンル</h2>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {relatedTagsFromWorks.map((tag) => (
                 <Link
                   key={tag}
                   href={`/tags/${encodeURIComponent(tag)}`}

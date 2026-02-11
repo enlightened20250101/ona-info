@@ -121,6 +121,56 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
       name: SITE.name,
     },
   };
+  const base = SITE.url.replace(/\/$/, "");
+  const keywords = Array.from(new Set(tags)).slice(0, 12);
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: `${article.title}のエロ動画はどこで見られますか？`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `本ページの「続きはこちら」から配信先へ進めます。`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `${article.title}の出演女優は？`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: article.related_actresses.length
+            ? `出演女優は ${article.related_actresses.join(" / ")} です。`
+            : "出演女優情報は現在準備中です。",
+        },
+      },
+      {
+        "@type": "Question",
+        name: `${article.title}の作品情報は？`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: article.summary,
+        },
+      },
+    ],
+  };
+  const videoLd = {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    name: article.title,
+    description: article.summary,
+    uploadDate: article.published_at,
+    thumbnailUrl: article.images?.[0]?.url ? [article.images[0].url] : undefined,
+    contentUrl: article.affiliate_url ?? undefined,
+    embedUrl: article.affiliate_url ?? undefined,
+    publisher: {
+      "@type": "Organization",
+      name: SITE.name,
+    },
+    keywords: keywords.join(", "),
+    mainEntityOfPage: `${base}/works/${article.slug}`,
+  };
 
   return (
     <div className="min-h-screen px-6 pb-28 pt-12 sm:px-10">
@@ -128,6 +178,16 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(videoLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <Breadcrumbs
