@@ -8,6 +8,14 @@ function buildAffiliateUrl(canonicalUrl: string, affiliateId: string) {
   if (!canonicalUrl) return "";
 
   const linkStyle = getEnv("DMM_AFFILIATE_LINK_STYLE", "");
+  const newTemplate = getEnv("DMM_NEW_AFFILIATE_URL_TEMPLATE", "");
+  if (linkStyle === "template" && newTemplate) {
+    const encoded = encodeURIComponent(canonicalUrl);
+    return newTemplate
+      .replace("{encoded_url}", encoded)
+      .replace("{url}", canonicalUrl)
+      .replace("{affiliate_id}", affiliateId);
+  }
   if (linkStyle === "utm") {
     try {
       const url = new URL(canonicalUrl);
@@ -23,7 +31,6 @@ function buildAffiliateUrl(canonicalUrl: string, affiliateId: string) {
     }
   }
 
-  const newTemplate = getEnv("DMM_NEW_AFFILIATE_URL_TEMPLATE", "");
   if (newTemplate) {
     const encoded = encodeURIComponent(canonicalUrl);
     return newTemplate
