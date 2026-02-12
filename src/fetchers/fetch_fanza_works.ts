@@ -210,7 +210,7 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
         primary = selectedThumb;
       }
     }
-    const images = uniqueImages.slice(0, 5).map((url: string, idx: number) => ({
+    const images = uniqueImages.slice(0, 10).map((url: string, idx: number) => ({
       url,
       alt: `${title} ${idx + 1}`,
     }));
