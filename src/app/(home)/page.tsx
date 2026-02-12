@@ -5,6 +5,7 @@ import {
   getActressRanking,
   getLatestArticles,
   getLatestByType,
+  getPopularTagsFromTopics,
   getTopGenres,
 } from "@/lib/db";
 import { buildPagination } from "@/lib/pagination";
@@ -74,7 +75,9 @@ export default async function Home({
   );
 
   const popularTags = buildPopularTags(
-    dailyTopics.map((topic) => `${topic.title} ${topic.summary}`)
+    (await getPopularTagsFromTopics(12)).map(
+      (topic) => `${topic.title ?? ""} ${topic.summary ?? ""}`
+    )
   );
   const topGenres = await getTopGenres(8);
   const popularGenres = topGenres.map((row) => `genre:${row.genre}`);

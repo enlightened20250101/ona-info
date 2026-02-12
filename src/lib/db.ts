@@ -463,3 +463,15 @@ export async function getTopTags(limit = 20) {
   if (error) throw error;
   return (data ?? []) as TagStat[];
 }
+
+export async function getPopularTagsFromTopics(limit = 20) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("articles")
+    .select("title,summary")
+    .eq("type", "topic")
+    .order("published_at", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return data ?? [];
+}
