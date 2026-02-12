@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildTrend } from "@/lib/analytics";
-import { extractMetaTagsFromBody, extractTags, normalizeTag, tagLabel, tagSummary } from "@/lib/tagging";
+import { extractTags, normalizeTag, tagLabel, tagSummary } from "@/lib/tagging";
 import { getLatestArticles, getLatestByType } from "@/lib/db";
 import { Article } from "@/lib/schema";
 import { SITE } from "@/lib/site";
@@ -64,6 +64,13 @@ function buildTagTrendFromArticles(tag: string, articles: Article[]) {
   return buildTrend(points);
 }
 
+function buildMetaTagsFromWork(work: Article) {
+  const tags: string[] = [];
+  (work.meta_genres ?? []).forEach((genre) => tags.push(`genre:${genre}`));
+  (work.meta_makers ?? []).forEach((maker) => tags.push(`maker:${maker}`));
+  return tags;
+}
+
 export default async function TagPage({ params }: { params: Promise<{ tag: string }> }) {
   const { tag } = await params;
   const articles = await getLatestArticles(200);
@@ -83,7 +90,7 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
 
   const matched = articles.filter((article) => {
     const text = `${article.title} ${article.summary}`;
-    const metaTags = article.type === "work" ? extractMetaTagsFromBody(article.body) : [];
+    const metaTags = article.type === "work" ? buildMetaTagsFromWork(article) : [];
     return (
       extractTags(text).includes(normalizedTag) ||
       metaTags.includes(normalizedTag) ||
@@ -93,7 +100,7 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
 
   const popularWorks = works.filter((work) => {
     const text = `${work.title} ${work.summary}`;
-    const metaTags = extractMetaTagsFromBody(work.body);
+    const metaTags = buildMetaTagsFromWork(work);
     return (
       extractTags(text).includes(normalizedTag) ||
       metaTags.includes(normalizedTag) ||
@@ -103,11 +110,9 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
 
   const relatedMetaTags = Array.from(
     new Set(
-      popularWorks.flatMap((work) =>
-        extractMetaTagsFromBody(work.body).filter((tag) =>
-          tag.startsWith("genre:") || tag.startsWith("maker:")
-        )
-      )
+      popularWorks
+        .flatMap((work) => buildMetaTagsFromWork(work))
+        .filter((tag) => tag.startsWith("genre:") || tag.startsWith("maker:"))
     )
   ).slice(0, 8);
 
@@ -121,9 +126,9 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
   ).slice(0, 12);
   const relatedTags = Array.from(
     new Set(
-      popularWorks.flatMap((work) =>
-        extractMetaTagsFromBody(work.body).filter((tag) => tag !== normalizedTag)
-      )
+      popularWorks
+        .flatMap((work) => buildMetaTagsFromWork(work))
+        .filter((tag) => tag !== normalizedTag)
     )
   ).slice(0, 16);
   const recentTagArticles = matched.slice(0, 12);
