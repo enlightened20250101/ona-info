@@ -392,7 +392,7 @@ export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
     .order("published_at", { ascending: false })
     .limit(preferredLimit);
 
-  if (!error) {
+  if (!error && data && data.length > 0) {
     return (data ?? [])
       .map((row) => normalizeArticle(row as Article))
       .slice(0, limit);
@@ -404,7 +404,7 @@ export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
     .select("*")
     .eq("type", "work")
     .order("published_at", { ascending: false })
-    .limit(200);
+    .limit(2000);
   if (fallback.error) {
     throw fallback.error;
   }

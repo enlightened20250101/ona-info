@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import { extractTags, tagLabel } from "@/lib/tagging";
 import {
   getActressRanking,
+  getActressCovers,
   getLatestArticles,
   getLatestByType,
   getTopGenres,
@@ -64,10 +65,15 @@ export default async function Home({
   const topGenres = await getTopGenres(8);
   const popularGenres = topGenres.map((row) => `genre:${row.genre}`);
   const topActresses = await getActressRanking(8);
+  const actressSlugs = topActresses.map((row) => row.actress);
+  const actressCoverMap = await getActressCovers(actressSlugs);
   const popularActresses = topActresses.map((row) => ({
     slug: row.actress,
     count: row.work_count,
-    image: latestWorks.find((work) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ?? null,
+    image:
+      actressCoverMap.get(row.actress) ??
+      latestWorks.find((work) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ??
+      null,
   }));
   const heroWorks = latestWorks.filter((work) => work.images[0]?.url).slice(0, 9);
   const visualWorks = latestWorks.slice(0, 12);
