@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { extractTags, tagLabel } from "@/lib/tagging";
 import { buildPagination } from "@/lib/pagination";
-import { getLatestArticles } from "@/lib/db";
+import { getLatestArticles, searchArticlesPage } from "@/lib/db";
 import SearchHistoryClient from "@/app/(site)/search/SearchHistoryClient";
 import { Article } from "@/lib/schema";
 import { SITE } from "@/lib/site";
@@ -104,7 +104,16 @@ export default async function SearchPage({
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
   const perPage = Math.min(50, Math.max(5, Number(sp.perPage ?? "20") || 20));
   const limit = Math.min(1000, Math.max(50, Number(sp.limit ?? "200") || 200));
-  const articles = await getLatestArticles(limit);
+  const searchResult = query
+    ? await searchArticlesPage({
+        query,
+        page,
+        perPage,
+        type: mode === "all" ? undefined : (mode as Article["type"]),
+        order: order as "newest" | "oldest" | "title",
+      })
+    : await getLatestArticles(limit).then((items) => ({ items, total: items.length }));
+  const articles = searchResult.items;
 
   const results = query
     ? articles.filter((article) => {
@@ -122,10 +131,11 @@ export default async function SearchPage({
     : [];
 
   const sorted = orderResults(sortResults(results, mode), order);
-  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
+  const effectiveTotal = query.startsWith("#") ? results.length : searchResult.total;
+  const totalPages = Math.max(1, Math.ceil(effectiveTotal / perPage));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * perPage;
-  const pageItems = sorted.slice(start, start + perPage);
+  const pageItems = query ? sorted : sorted.slice(start, start + perPage);
   const baseParams = new URLSearchParams();
   if (sp.q) baseParams.set("q", sp.q);
   if (sp.type) baseParams.set("type", sp.type);

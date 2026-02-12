@@ -212,6 +212,71 @@ export async function getLatestByType(type: ArticleType, limit = 10) {
   return (data ?? []).map((row) => normalizeArticle(row as Article));
 }
 
+export async function getLatestByTypePage(
+  type: ArticleType,
+  page = 1,
+  perPage = 20
+) {
+  const client = getSupabase();
+  const safePage = Math.max(1, page);
+  const safePerPage = Math.min(100, Math.max(1, perPage));
+  const from = (safePage - 1) * safePerPage;
+  const to = from + safePerPage - 1;
+  const { data, error, count } = await client
+    .from("articles")
+    .select("*", { count: "exact" })
+    .eq("type", type)
+    .order("published_at", { ascending: false })
+    .range(from, to);
+  if (error) throw error;
+  return {
+    items: (data ?? []).map((row) => normalizeArticle(row as Article)),
+    total: count ?? 0,
+  };
+}
+
+type SearchOrder = "newest" | "oldest" | "title";
+
+export async function searchArticlesPage(options: {
+  query: string;
+  page?: number;
+  perPage?: number;
+  type?: ArticleType;
+  order?: SearchOrder;
+}) {
+  const client = getSupabase();
+  const safePage = Math.max(1, options.page ?? 1);
+  const safePerPage = Math.min(100, Math.max(1, options.perPage ?? 20));
+  const from = (safePage - 1) * safePerPage;
+  const to = from + safePerPage - 1;
+  const rawQuery = options.query.trim();
+  const query = rawQuery.replace(/%/g, "\\%").replace(/_/g, "\\_");
+
+  let builder = client
+    .from("articles")
+    .select("*", { count: "exact" })
+    .or(`title.ilike.%${query}%,summary.ilike.%${query}%,slug.ilike.%${query}%`);
+
+  if (options.type) {
+    builder = builder.eq("type", options.type);
+  }
+
+  if (options.order === "oldest") {
+    builder = builder.order("published_at", { ascending: true });
+  } else if (options.order === "title") {
+    builder = builder.order("title", { ascending: true });
+  } else {
+    builder = builder.order("published_at", { ascending: false });
+  }
+
+  const { data, error, count } = await builder.range(from, to);
+  if (error) throw error;
+  return {
+    items: (data ?? []).map((row) => normalizeArticle(row as Article)),
+    total: count ?? 0,
+  };
+}
+
 export async function getWorkSlugs(limit = 2000) {
   const client = getSupabase();
   const { data, error } = await client
