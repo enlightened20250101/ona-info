@@ -34,5 +34,6 @@ export type RawFanzaWork = {
   images: { url: string; alt: string }[];
   canonical_url: string;
   affiliate_url?: string | null;
+  embed_html?: string | null;
   fetched_at: string;
 };

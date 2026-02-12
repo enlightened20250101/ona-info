@@ -44,6 +44,21 @@ function buildAffiliateUrl(canonicalUrl: string, affiliateId: string) {
   }
 }
 
+function buildEmbedHtml(contentId: string) {
+  const embedAffiliateId =
+    getEnv("DMM_EMBED_AFFILIATE_ID", "") ||
+    getEnv("DMM_LINK_AFFILIATE_ID", "") ||
+    getEnv("DMM_AFFILIATE_ID", "");
+  if (!embedAffiliateId || !contentId) return null;
+
+  const size = getEnv("DMM_EMBED_SIZE", "1280_720");
+  const normalizedId = contentId.trim().toLowerCase();
+  if (!normalizedId) return null;
+
+  const src = `https://www.dmm.co.jp/litevideo/-/part/=/affi_id=${embedAffiliateId}/cid=${normalizedId}/size=${size}/`;
+  return `<div style="width:100%; padding-top: 75%; position:relative;"><iframe width="100%" height="100%" max-width="1280px" style="position: absolute; top: 0; left: 0;" src="${src}" scrolling="no" frameborder="0" allowfullscreen></iframe></div>`;
+}
+
 export function normalizeFanzaWork(raw: RawFanzaWork, publishedAt: Date): Article | null {
   if (!raw.content_id || !raw.canonical_url) {
     return null;
@@ -77,6 +92,7 @@ export function normalizeFanzaWork(raw: RawFanzaWork, publishedAt: Date): Articl
     images: raw.images,
     source_url: raw.canonical_url,
     affiliate_url: affiliateUrl,
+    embed_html: raw.embed_html ?? buildEmbedHtml(raw.content_id),
     related_works: [],
     related_actresses: actresses,
     published_at: publishedAt.toISOString(),
