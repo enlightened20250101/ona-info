@@ -4,7 +4,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { extractTags, tagLabel } from "@/lib/tagging";
 import { buildPagination } from "@/lib/pagination";
 import { getLatestArticles } from "@/lib/db";
-import SearchHistoryClient from "@/app/search/SearchHistoryClient";
+import SearchHistoryClient from "@/app/(site)/search/SearchHistoryClient";
 import { Article } from "@/lib/schema";
 import { SITE } from "@/lib/site";
 
