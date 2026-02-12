@@ -247,15 +247,19 @@ export async function getLatestByTypePage(
 
 export async function getWorksByGenre(genre: string, limit = 12) {
   const client = getSupabase();
-  const { data, error } = await client
-    .from("articles")
-    .select("*")
-    .eq("type", "work")
-    .contains("meta_genres", [genre])
-    .order("published_at", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return (data ?? []).map((row) => normalizeArticle(row as Article));
+  try {
+    const { data, error } = await client
+      .from("articles")
+      .select("*")
+      .eq("type", "work")
+      .contains("meta_genres", [genre])
+      .order("published_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []).map((row) => normalizeArticle(row as Article));
+  } catch {
+    return [];
+  }
 }
 
 export async function getWorksByMetaTagPage(
@@ -418,10 +422,30 @@ export async function getActressCovers(actresses: string[]) {
     .from("actress_covers")
     .select("actress,cover_url")
     .in("actress", actresses);
-  if (error) throw error;
-  return new Map(
-    ((data ?? []) as ActressCoverStat[]).map((row) => [row.actress, row.cover_url ?? null])
+  if (!error && data && data.length > 0) {
+    return new Map(
+      ((data ?? []) as ActressCoverStat[]).map((row) => [row.actress, row.cover_url ?? null])
+    );
+  }
+
+  // Fallback: fetch per-actress latest cover from articles.
+  const coverEntries = await Promise.all(
+    actresses.map(async (actressSlug) => {
+      const { data: row } = await client
+        .from("articles")
+        .select("images")
+        .eq("type", "work")
+        .contains("related_actresses", [actressSlug])
+        .order("published_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const images = parseArray<{ url: string; alt: string }>(
+        (row as { images?: Json } | null)?.images
+      );
+      return [actressSlug, images?.[0]?.url ?? null] as const;
+    })
   );
+  return new Map(coverEntries);
 }
 
 export async function refreshActressStats() {
