@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import { Suspense } from "react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { AffiliateEmbed } from "@/components/AffiliateEmbed";
 import { extractMetaTagsFromBody, extractTags, tagKeywords, tagLabel } from "@/lib/tagging";
 import { findWorksByActressSlug, getArticleBySlug, getLatestByType } from "@/lib/db";
 import { SITE } from "@/lib/site";
+import { Article } from "@/lib/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -91,57 +93,11 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
   }
 
   const leadActress = article.related_actresses[0];
-  const related = leadActress
-    ? (await findWorksByActressSlug(leadActress, 8)).filter(
-        (work) => work.slug !== article.slug
-      )
-    : [];
-  const fallbackCover = article.images?.[0]?.url ?? null;
   const baseTags = extractTags(`${article.title} ${article.summary}`);
   const metaTags = extractMetaTagsFromBody(article.body);
   const tags = [...baseTags, ...metaTags];
   const keywordPool = tags.flatMap(tagKeywords);
   const base = SITE.url.replace(/\/$/, "");
-  const latestTopics = await getLatestByType("topic", 40);
-  const relatedTopics = latestTopics
-    .filter((topic) => {
-      const topicTags = extractTags(`${topic.title} ${topic.summary}`);
-      return topicTags.some((tag) => baseTags.includes(tag));
-    })
-    .slice(0, 4);
-  const recentWorks = (await getLatestByType("work", 120))
-    .filter((work) => work.slug !== article.slug)
-    .slice(0, 12);
-  const sameGenre = metaTags.find((tag) => tag.startsWith("genre:"));
-  const sameGenreWorks = sameGenre
-    ? (await getLatestByType("work", 160))
-        .filter(
-          (work) =>
-            work.slug !== article.slug && work.body.includes(sameGenre.replace("genre:", ""))
-        )
-        .slice(0, 6)
-    : [];
-  const fallbackWorks = (await getLatestByType("work", 80))
-    .filter(
-      (work) =>
-        work.slug !== article.slug &&
-        !sameGenreWorks.some((picked) => picked.slug === work.slug)
-    )
-    .slice(0, 6);
-  const relatedList = [...sameGenreWorks, ...fallbackWorks].slice(0, 12);
-  const relatedItemList = relatedList.length
-    ? {
-        "@context": "https://schema.org",
-        "@type": "ItemList",
-        name: `${article.title}の関連作品`,
-        itemListElement: relatedList.map((work, index) => ({
-          "@type": "ListItem",
-          position: index + 1,
-          url: `${base}/works/${work.slug}`,
-          name: work.title,
-        })),
-      }
-    : null;
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -222,13 +178,6 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(videoLd) }}
       />
-      {relatedItemList ? (
-        <script
-          type="application/ld+json"
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(relatedItemList) }}
-        />
-      ) : null}
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
@@ -345,205 +294,15 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
           </div>
         </section>
 
-        {article.related_actresses.length > 0 ? (
-          <section className="rounded-3xl border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold">関連女優</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {article.related_actresses.map((slug) => {
-                const cover =
-                  related.find((work) => work.related_actresses.includes(slug))?.images?.[0]
-                    ?.url ?? fallbackCover;
-                return (
-                  <Link
-                    key={slug}
-                    href={`/actresses/${slug}`}
-                    className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
-                  >
-                    <div className="relative h-28 overflow-hidden bg-accent-soft">
-                      {cover ? (
-                        <img
-                          src={cover}
-                          alt={slug}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
-                          Actress
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <p className="text-sm font-semibold">{slug}</p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        ) : null}
-
-        {sameGenreWorks.length > 0 ? (
-          <section className="rounded-3xl border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold">同ジャンルの作品</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {sameGenreWorks.map((work) => (
-                <Link
-                  key={work.id}
-                  href={`/works/${work.slug}`}
-                  className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
-                >
-                  {work.images?.[0]?.url ? (
-                    <img
-                      src={work.images[0].url}
-                      alt={work.images[0].alt}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
-                      No Image
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <p className="text-xs text-muted">{work.slug}</p>
-                    <p className="mt-1 text-sm font-semibold line-clamp-2">{work.title}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {fallbackWorks.length > 0 ? (
-          <section className="rounded-3xl border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold">あなたにおすすめ</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {fallbackWorks.map((work) => (
-                <Link
-                  key={work.id}
-                  href={`/works/${work.slug}`}
-                  className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
-                >
-                  {work.images?.[0]?.url ? (
-                    <img
-                      src={work.images[0].url}
-                      alt={work.images[0].alt}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
-                      No Image
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <p className="text-xs text-muted">{work.slug}</p>
-                    <p className="mt-1 text-sm font-semibold line-clamp-2">{work.title}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {related.length > 0 ? (
-          <section className="rounded-3xl border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold">同じ女優の作品</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {related.map((work) => (
-                <Link
-                  key={work.id}
-                  href={`/works/${work.slug}`}
-                  className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
-                >
-                  {work.images?.[0]?.url ? (
-                    <img
-                      src={work.images[0].url}
-                      alt={work.images[0].alt}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
-                      No Image
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <p className="text-xs text-muted">{work.slug}</p>
-                    <p className="mt-1 text-sm font-semibold line-clamp-2">{work.title}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {relatedTopics.length > 0 ? (
-          <section className="rounded-3xl border border-border bg-card p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">関連トピック</h2>
-              <Link href="/topics" className="text-xs font-semibold text-accent">
-                トピック一覧へ →
-              </Link>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {relatedTopics.map((topic) => (
-                <Link
-                  key={topic.id}
-                  href={`/topics/${topic.slug}`}
-                  className="rounded-2xl border border-border bg-white p-4 transition hover:-translate-y-1 hover:border-accent/40"
-                >
-                  <p className="text-xs text-muted">{topic.slug}</p>
-                  <p className="mt-1 text-sm font-semibold">{topic.title}</p>
-                  <p className="mt-1 text-xs text-muted line-clamp-2">{topic.summary}</p>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {recentWorks.length > 0 ? (
-          <section className="rounded-3xl border border-border bg-card p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">最新の作品</h2>
-              <Link href="/works" className="text-xs font-semibold text-accent">
-                作品一覧へ →
-              </Link>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {recentWorks.map((work) => (
-                <Link
-                  key={work.id}
-                  href={`/works/${work.slug}`}
-                  className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
-                >
-                  {work.images?.[0]?.url ? (
-                    <img
-                      src={work.images[0].url}
-                      alt={work.images[0].alt}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-28 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    <div className="flex h-28 items-center justify-center bg-accent-soft text-xs text-accent">
-                      No Image
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <p className="text-xs text-muted">{work.slug}</p>
-                    <p className="mt-1 text-sm font-semibold line-clamp-2">{work.title}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
+        <Suspense fallback={<RelatedSectionsSkeleton />}>
+          {/* @ts-expect-error Server Component */}
+          <RelatedSections
+            article={article}
+            baseTags={baseTags}
+            metaTags={metaTags}
+            leadActress={leadActress}
+          />
+        </Suspense>
 
         <section className="rounded-3xl border border-border bg-card p-6">
           <h2 className="text-lg font-semibold">関連リンク</h2>
@@ -589,5 +348,307 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
         </div>
       ) : null}
     </div>
+  );
+}
+
+function RelatedSectionsSkeleton() {
+  return (
+    <>
+      <section className="rounded-3xl border border-border bg-card p-6">
+        <div className="h-4 w-28 rounded-full skeleton" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-32 rounded-2xl skeleton" />
+          ))}
+        </div>
+      </section>
+      <section className="rounded-3xl border border-border bg-card p-6">
+        <div className="h-4 w-28 rounded-full skeleton" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-32 rounded-2xl skeleton" />
+          ))}
+        </div>
+      </section>
+      <section className="rounded-3xl border border-border bg-card p-6">
+        <div className="h-4 w-28 rounded-full skeleton" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="h-28 rounded-2xl skeleton" />
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+async function RelatedSections({
+  article,
+  baseTags,
+  metaTags,
+  leadActress,
+}: {
+  article: Article;
+  baseTags: string[];
+  metaTags: string[];
+  leadActress?: string;
+}) {
+  const base = SITE.url.replace(/\/$/, "");
+  const related = leadActress
+    ? (await findWorksByActressSlug(leadActress, 8)).filter(
+        (work) => work.slug !== article.slug
+      )
+    : [];
+  const fallbackCover = article.images?.[0]?.url ?? null;
+  const latestTopics = await getLatestByType("topic", 40);
+  const relatedTopics = latestTopics
+    .filter((topic) => {
+      const topicTags = extractTags(`${topic.title} ${topic.summary}`);
+      return topicTags.some((tag) => baseTags.includes(tag));
+    })
+    .slice(0, 4);
+  const recentWorks = (await getLatestByType("work", 120))
+    .filter((work) => work.slug !== article.slug)
+    .slice(0, 12);
+  const sameGenre = metaTags.find((tag) => tag.startsWith("genre:"));
+  const sameGenreWorks = sameGenre
+    ? (await getLatestByType("work", 160))
+        .filter(
+          (work) =>
+            work.slug !== article.slug && work.body.includes(sameGenre.replace("genre:", ""))
+        )
+        .slice(0, 6)
+    : [];
+  const fallbackWorks = (await getLatestByType("work", 80))
+    .filter(
+      (work) =>
+        work.slug !== article.slug &&
+        !sameGenreWorks.some((picked) => picked.slug === work.slug)
+    )
+    .slice(0, 6);
+  const relatedList = [...sameGenreWorks, ...fallbackWorks].slice(0, 12);
+  const relatedItemList = relatedList.length
+    ? {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: `${article.title}の関連作品`,
+        itemListElement: relatedList.map((work, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          url: `${base}/works/${work.slug}`,
+          name: work.title,
+        })),
+      }
+    : null;
+
+  return (
+    <>
+      {relatedItemList ? (
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(relatedItemList) }}
+        />
+      ) : null}
+      {article.related_actresses.length > 0 ? (
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold">関連女優</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {article.related_actresses.map((slug) => {
+              const cover =
+                related.find((work) => work.related_actresses.includes(slug))?.images?.[0]?.url ??
+                fallbackCover;
+              return (
+                <Link
+                  key={slug}
+                  href={`/actresses/${slug}`}
+                  className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
+                >
+                  <div className="relative h-28 overflow-hidden bg-accent-soft">
+                    {cover ? (
+                      <img
+                        src={cover}
+                        alt={slug}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
+                        Actress
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="text-sm font-semibold">{slug}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {sameGenreWorks.length > 0 ? (
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold">同ジャンルの作品</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {sameGenreWorks.map((work) => (
+              <Link
+                key={work.id}
+                href={`/works/${work.slug}`}
+                className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
+              >
+                {work.images?.[0]?.url ? (
+                  <img
+                    src={work.images[0].url}
+                    alt={work.images[0].alt}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
+                    No Image
+                  </div>
+                )}
+                <div className="p-4">
+                  <p className="text-xs text-muted">{work.slug}</p>
+                  <p className="mt-1 text-sm font-semibold line-clamp-2">{work.title}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {fallbackWorks.length > 0 ? (
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold">あなたにおすすめ</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {fallbackWorks.map((work) => (
+              <Link
+                key={work.id}
+                href={`/works/${work.slug}`}
+                className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
+              >
+                {work.images?.[0]?.url ? (
+                  <img
+                    src={work.images[0].url}
+                    alt={work.images[0].alt}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
+                    No Image
+                  </div>
+                )}
+                <div className="p-4">
+                  <p className="text-xs text-muted">{work.slug}</p>
+                  <p className="mt-1 text-sm font-semibold line-clamp-2">{work.title}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {related.length > 0 ? (
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold">同じ女優の作品</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((work) => (
+              <Link
+                key={work.id}
+                href={`/works/${work.slug}`}
+                className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
+              >
+                {work.images?.[0]?.url ? (
+                  <img
+                    src={work.images[0].url}
+                    alt={work.images[0].alt}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
+                    No Image
+                  </div>
+                )}
+                <div className="p-4">
+                  <p className="text-xs text-muted">{work.slug}</p>
+                  <p className="mt-1 text-sm font-semibold line-clamp-2">{work.title}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {relatedTopics.length > 0 ? (
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">関連トピック</h2>
+            <Link href="/topics" className="text-xs font-semibold text-accent">
+              トピック一覧へ →
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {relatedTopics.map((topic) => (
+              <Link
+                key={topic.id}
+                href={`/topics/${topic.slug}`}
+                className="rounded-2xl border border-border bg-white p-4 transition hover:-translate-y-1 hover:border-accent/40"
+              >
+                <p className="text-xs text-muted">{topic.slug}</p>
+                <p className="mt-1 text-sm font-semibold">{topic.title}</p>
+                <p className="mt-1 text-xs text-muted line-clamp-2">{topic.summary}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {recentWorks.length > 0 ? (
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">最新の作品</h2>
+            <Link href="/works" className="text-xs font-semibold text-accent">
+              作品一覧へ →
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {recentWorks.map((work) => (
+              <Link
+                key={work.id}
+                href={`/works/${work.slug}`}
+                className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
+              >
+                {work.images?.[0]?.url ? (
+                  <img
+                    src={work.images[0].url}
+                    alt={work.images[0].alt}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-28 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="flex h-28 items-center justify-center bg-accent-soft text-xs text-accent">
+                    No Image
+                  </div>
+                )}
+                <div className="p-4">
+                  <p className="text-xs text-muted">{work.slug}</p>
+                  <p className="mt-1 text-sm font-semibold line-clamp-2">{work.title}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </>
   );
 }
