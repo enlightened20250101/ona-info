@@ -36,6 +36,7 @@ export default async function WorksPage({
   const totalPages = Math.max(1, Math.ceil(result.total / perPage));
   const safePage = Math.min(page, totalPages);
   const pageItems = filtered;
+  const start = (safePage - 1) * perPage;
   const baseParams = new URLSearchParams();
   if (sp.q) baseParams.set("q", sp.q);
 
