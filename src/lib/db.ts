@@ -242,7 +242,7 @@ export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
 
 export async function refreshActressStats() {
   const client = getSupabase();
-  const { error } = await client.rpc("refresh_actress_stats");
+  const { error } = await client.rpc("refresh_actress_stats" as never);
   if (error) {
     throw error;
   }
