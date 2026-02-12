@@ -7,6 +7,22 @@ import { getEnv, requireEnv } from "@/lib/env";
 function buildAffiliateUrl(canonicalUrl: string, affiliateId: string) {
   if (!canonicalUrl) return "";
 
+  const linkStyle = getEnv("DMM_AFFILIATE_LINK_STYLE", "");
+  if (linkStyle === "utm") {
+    try {
+      const url = new URL(canonicalUrl);
+      url.searchParams.set("utm_medium", "dmm_affiliate");
+      url.searchParams.set("utm_source", affiliateId);
+      url.searchParams.set("utm_term", "fanza.co.jp");
+      url.searchParams.set("utm_campaign", "affiliate_search_link");
+      url.searchParams.set("utm_content", "link");
+      return url.toString();
+    } catch {
+      const separator = canonicalUrl.includes("?") ? "&" : "?";
+      return `${canonicalUrl}${separator}utm_medium=dmm_affiliate&utm_source=${affiliateId}&utm_term=fanza.co.jp&utm_campaign=affiliate_search_link&utm_content=link`;
+    }
+  }
+
   const newTemplate = getEnv("DMM_NEW_AFFILIATE_URL_TEMPLATE", "");
   if (newTemplate) {
     const encoded = encodeURIComponent(canonicalUrl);
@@ -33,7 +49,8 @@ export function normalizeFanzaWork(raw: RawFanzaWork, publishedAt: Date): Articl
     return null;
   }
 
-  const affiliateId = requireEnv("DMM_AFFILIATE_ID");
+  const affiliateId =
+    getEnv("DMM_LINK_AFFILIATE_ID", "") || requireEnv("DMM_AFFILIATE_ID");
   const actresses = raw.actresses.map((name) => slugify(name));
 
   const affiliateUrl = raw.affiliate_url ?? buildAffiliateUrl(raw.canonical_url, affiliateId);

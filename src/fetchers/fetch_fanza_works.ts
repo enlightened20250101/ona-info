@@ -108,7 +108,7 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
     addImage(item?.imageURL?.sample);
     addImage(item?.sampleImageURL);
 
-    const apiImages = imageCandidates.filter(Boolean);
+    const apiImages = imageCandidates.filter(Boolean) as string[];
     const hasRealImage = apiImages.some((url) => !nowPrintingPattern.test(url));
     if (apiImages.length > 0 && !hasRealImage) {
       continue;
@@ -124,14 +124,20 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
     if (normalizedId) {
       const base = `https://awsimgsrc.dmm.co.jp/pics_dig/digital/video/${normalizedId}/${normalizedId}`;
       inferred.push(`${base}pl.jpg`);
-      for (let idx = 1; idx <= 9; idx += 1) {
-        inferred.push(`${base}jp-${idx}.jpg`);
+      const hasJp = apiImages.some((url) => /jp-\d+\.jpg/i.test(url));
+      if (hasJp) {
+        for (let idx = 1; idx <= 9; idx += 1) {
+          inferred.push(`${base}jp-${idx}.jpg`);
+        }
       }
     }
 
-    const uniqueImages = Array.from(
-      new Set([...inferred, ...imageCandidates.filter(Boolean)])
+    const uniqueImages = Array.from(new Set([...inferred, ...apiImages])).filter(
+      (url) => !nowPrintingPattern.test(String(url))
     ) as string[];
+    if (uniqueImages.length === 0) {
+      continue;
+    }
     const images = uniqueImages.slice(0, 5).map((url: string, idx: number) => ({
       url,
       alt: `${title} ${idx + 1}`,
