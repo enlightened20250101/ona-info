@@ -26,13 +26,13 @@ const TAGS = [
 
 export const metadata: Metadata = {
   title: `タグ一覧・エロ動画 | ${SITE.name}`,
-  description: "タグ一覧。エロ動画・作品の話題タグから探せます。",
+  description: "タグ一覧。エロ動画・作品の話題タグを無料でチェック。",
   alternates: {
     canonical: `${SITE.url.replace(/\/$/, "")}/tags`,
   },
   openGraph: {
     title: `タグ一覧・エロ動画 | ${SITE.name}`,
-    description: "タグ一覧。エロ動画・作品の話題タグから探せます。",
+    description: "タグ一覧。エロ動画・作品の話題タグを無料でチェック。",
     type: "website",
   },
 };
@@ -62,7 +62,7 @@ export default async function TagsPage({
     "@type": "CollectionPage",
     name: "タグ一覧・エロ動画",
     url: `${base}/tags`,
-    description: "サイト内で利用しているタグ一覧。エロ動画・作品の話題タグから探せます。",
+    description: "サイト内で利用しているタグ一覧。エロ動画・作品の話題タグを無料でチェック。",
   };
   const listLd = {
     "@context": "https://schema.org",
@@ -100,7 +100,7 @@ export default async function TagsPage({
           <p className="text-xs text-muted">tags</p>
           <h1 className="mt-2 text-3xl font-semibold">タグ一覧</h1>
           <p className="mt-2 text-sm text-muted">
-            エロ動画・作品の話題タグから探せます。サイト内で利用しているタグ一覧です。
+            エロ動画・作品の話題タグを無料でチェック。サイト内で利用しているタグ一覧です。
           </p>
           <form action="/tags" method="get" className="mt-4 flex gap-2">
             <input

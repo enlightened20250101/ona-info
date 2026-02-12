@@ -9,13 +9,13 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: `エロ動画・作品一覧 | ${SITE.name}`,
-  description: "最新のエロ動画・作品一覧。話題の作品をまとめてチェック。",
+  description: "最新のエロ動画・作品一覧を無料でチェック。話題の作品をまとめて紹介。",
   alternates: {
     canonical: `${SITE.url.replace(/\/$/, "")}/works`,
   },
   openGraph: {
     title: `エロ動画・作品一覧 | ${SITE.name}`,
-    description: "最新のエロ動画・作品一覧。話題の作品をまとめてチェック。",
+    description: "最新のエロ動画・作品一覧を無料でチェック。話題の作品をまとめて紹介。",
     type: "website",
   },
 };
@@ -48,7 +48,7 @@ export default async function WorksPage({
     "@type": "CollectionPage",
     name: "エロ動画・作品一覧",
     url: `${base}/works`,
-    description: "最新のエロ動画・作品一覧。話題の作品をまとめてチェック。",
+    description: "最新のエロ動画・作品一覧を無料でチェック。話題の作品をまとめて紹介。",
   };
   const listLd = {
     "@context": "https://schema.org",
@@ -85,7 +85,7 @@ export default async function WorksPage({
           <p className="text-xs text-muted">works</p>
           <h1 className="mt-2 text-3xl font-semibold">エロ動画・作品一覧</h1>
           <p className="mt-2 text-sm text-muted">
-            最新のエロ動画・作品をまとめて表示します。
+            最新のエロ動画・作品を無料でチェック。話題作をまとめて表示します。
           </p>
           <form action="/works" method="get" className="mt-4 flex gap-2">
             <input

@@ -19,7 +19,7 @@ export async function generateMetadata({
   const label = tagLabel(normalizedTag);
   return {
     title: `#${label} エロ動画・動画・作品 | ${SITE.name}`,
-    description: `#${label}のエロ動画・動画・関連作品をまとめて紹介。話題の作品やトピックをチェックできます。`,
+    description: `#${label}のエロ動画・動画・関連作品を無料でチェック。話題の作品やトピックをまとめて紹介。`,
     robots: {
       index: true,
       follow: true,
@@ -29,7 +29,7 @@ export async function generateMetadata({
     },
     openGraph: {
       title: `#${label} エロ動画・動画・作品 | ${SITE.name}`,
-      description: `#${label}のエロ動画・動画・関連作品をまとめて紹介。`,
+      description: `#${label}のエロ動画・動画・関連作品を無料でチェック。`,
       type: "website",
     },
   };
@@ -199,7 +199,7 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
           <h1 className="mt-2 text-3xl font-semibold">#{keyword}</h1>
           <p className="mt-2 text-sm text-muted">{tagSummary(normalizedTag)}</p>
           <p className="mt-2 text-sm text-muted">
-            #{keyword}のエロ動画・関連作品をまとめて紹介。最新の人気作品をチェックできます。
+            #{keyword}のエロ動画・関連作品を無料でチェック。最新の人気作品をまとめて紹介。
           </p>
           {relatedTags.length > 0 ? (
             <p className="mt-2 text-sm text-muted">

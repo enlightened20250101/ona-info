@@ -16,7 +16,7 @@ export async function generateMetadata({
   const slug = decodeURIComponent(rawSlug);
   return {
     title: `${slug} エロ動画・動画・出演作品 | ${SITE.name}`,
-    description: `${slug}のエロ動画・動画・出演作品をまとめて紹介。最新の関連作品をチェックできます。`,
+    description: `${slug}のエロ動画・動画・出演作品を無料でチェック。最新の関連作品をまとめて紹介。`,
     robots: {
       index: true,
       follow: true,
@@ -26,7 +26,7 @@ export async function generateMetadata({
     },
     openGraph: {
       title: `${slug} エロ動画・動画・出演作品 | ${SITE.name}`,
-      description: `${slug}のエロ動画・動画・出演作品をまとめて紹介。`,
+      description: `${slug}のエロ動画・動画・出演作品を無料でチェック。`,
       type: "profile",
     },
   };
@@ -130,7 +130,7 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
           <p className="text-xs text-muted">actress</p>
           <h1 className="mt-2 text-3xl font-semibold">{slug}</h1>
           <p className="mt-2 text-sm text-muted">
-            {slug}のエロ動画・出演作品をまとめて紹介。関連作品 {works.length}件
+            {slug}のエロ動画・出演作品を無料でチェック。関連作品 {works.length}件
           </p>
           {relatedTagsFromWorks.length > 0 ? (
             <p className="mt-2 text-sm text-muted">

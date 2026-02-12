@@ -59,7 +59,7 @@ export async function generateMetadata({
 
   return {
     title: `${article.title} (${article.slug}) | エロ動画・動画 | ${SITE.name}`,
-    description: `${article.title}のエロ動画・動画情報。${article.summary}`,
+    description: `${article.title}のエロ動画・動画情報を無料でチェック。${article.summary}`,
     robots: {
       index: true,
       follow: true,
@@ -69,7 +69,7 @@ export async function generateMetadata({
     },
     openGraph: {
       title: `${article.title} (${article.slug}) | エロ動画・動画 | ${SITE.name}`,
-      description: `${article.title}のエロ動画・動画情報。${article.summary}`,
+      description: `${article.title}のエロ動画・動画情報を無料でチェック。${article.summary}`,
       type: "article",
       images: article.images?.[0]?.url ? [{ url: article.images[0].url }] : undefined,
     },

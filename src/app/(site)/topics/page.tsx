@@ -9,13 +9,13 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: `エロ動画トピック | ${SITE.name}`,
-  description: "最新のエロ動画トピック一覧。話題の配信や人気キーワードをチェック。",
+  description: "最新のエロ動画トピック一覧を無料でチェック。話題の配信や人気キーワードを紹介。",
   alternates: {
     canonical: `${SITE.url.replace(/\/$/, "")}/topics`,
   },
   openGraph: {
     title: `エロ動画トピック | ${SITE.name}`,
-    description: "最新のエロ動画トピック一覧。話題の配信や人気キーワードをチェック。",
+    description: "最新のエロ動画トピック一覧を無料でチェック。話題の配信や人気キーワードを紹介。",
     type: "website",
   },
 };
@@ -50,7 +50,7 @@ export default async function TopicsPage({
     "@type": "CollectionPage",
     name: "エロ動画トピック",
     url: `${base}/topics`,
-    description: "最新のエロ動画トピック一覧。話題の配信や人気キーワードをチェック。",
+    description: "最新のエロ動画トピック一覧を無料でチェック。話題の配信や人気キーワードを紹介。",
   };
   const listLd = {
     "@context": "https://schema.org",
@@ -87,7 +87,7 @@ export default async function TopicsPage({
           <p className="text-xs text-muted">topics</p>
           <h1 className="mt-2 text-3xl font-semibold">エロ動画トピック</h1>
           <p className="mt-2 text-sm text-muted">
-            日次で生成されたトピックを一覧表示します。話題の配信・人気キーワードをチェック。
+            日次で生成されたトピックを無料でチェック。話題の配信・人気キーワードを紹介。
           </p>
           <form action="/topics" method="get" className="mt-4 flex gap-2">
             <input

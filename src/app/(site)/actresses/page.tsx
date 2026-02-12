@@ -10,13 +10,13 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: `女優一覧・エロ動画 | ${SITE.name}`,
-  description: "出演女優の一覧。女優名からエロ動画・出演作品を探せます。",
+  description: "出演女優の一覧。女優名からエロ動画・出演作品を無料でチェック。",
   alternates: {
     canonical: `${SITE.url.replace(/\/$/, "")}/actresses`,
   },
   openGraph: {
     title: `女優一覧・エロ動画 | ${SITE.name}`,
-    description: "出演女優の一覧。女優名からエロ動画・出演作品を探せます。",
+    description: "出演女優の一覧。女優名からエロ動画・出演作品を無料でチェック。",
     type: "website",
   },
 };
@@ -56,7 +56,7 @@ export default async function ActressesPage({
     "@type": "CollectionPage",
     name: "女優一覧・エロ動画",
     url: `${base}/actresses`,
-    description: "出演女優の一覧。女優名からエロ動画・出演作品を探せます。",
+    description: "出演女優の一覧。女優名からエロ動画・出演作品を無料でチェック。",
   };
   const listLd = {
     "@context": "https://schema.org",
@@ -93,7 +93,7 @@ export default async function ActressesPage({
           <p className="text-xs text-muted">actresses</p>
           <h1 className="mt-2 text-3xl font-semibold">女優一覧</h1>
           <p className="mt-2 text-sm text-muted">
-            女優名からエロ動画・出演作品を探せます。作品から抽出した女優一覧です。
+            女優名からエロ動画・出演作品を無料でチェック。作品から抽出した女優一覧です。
           </p>
           <form action="/actresses" method="get" className="mt-4 flex gap-2">
             <input
