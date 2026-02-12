@@ -38,7 +38,7 @@ export default async function ActressesPage({
   const query = (sp.q ?? "").trim().toLowerCase();
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
   const perPage = 30;
-  const works = await getLatestByType("work", 200);
+  const works = await getLatestByType("work", 2000);
   const actresses = buildActressList(works);
   const filtered = query
     ? actresses.filter((slug) => slug.toLowerCase().includes(query))
