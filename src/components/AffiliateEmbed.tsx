@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef } from "react";
 
 type EmbedInfo = {
-  className: string;
-  scriptSrc: string;
+  kind: "mgs" | "iframe";
+  className?: string;
+  scriptSrc?: string;
   scriptId?: string;
+  iframeSrc?: string;
 };
 
 function parseMgsEmbed(html: string): EmbedInfo | null {
@@ -17,18 +19,33 @@ function parseMgsEmbed(html: string): EmbedInfo | null {
   const classMatch = html.match(/<div\s+class="([^"]+)"/i);
   const idMatch = html.match(/<script[^>]+id="([^"]+)"/i);
   return {
+    kind: "mgs",
     className: classMatch?.[1] ?? "",
     scriptSrc: scriptMatch[1],
     scriptId: idMatch?.[1],
   };
 }
 
+function parseIframeEmbed(html: string): EmbedInfo | null {
+  if (!html) return null;
+  const iframeMatch = html.match(/<iframe[^>]+src="([^"]+)"/i);
+  if (!iframeMatch) return null;
+  return {
+    kind: "iframe",
+    iframeSrc: iframeMatch[1],
+  };
+}
+
+function parseEmbed(html: string): EmbedInfo | null {
+  return parseMgsEmbed(html) ?? parseIframeEmbed(html);
+}
+
 export function AffiliateEmbed({ embedHtml }: { embedHtml?: string | null }) {
-  const embed = useMemo(() => parseMgsEmbed(embedHtml ?? ""), [embedHtml]);
+  const embed = useMemo(() => parseEmbed(embedHtml ?? ""), [embedHtml]);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!embed) return;
+    if (!embed || embed.kind !== "mgs") return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -42,7 +59,7 @@ export function AffiliateEmbed({ embedHtml }: { embedHtml?: string | null }) {
 
     const script = document.createElement("script");
     if (embed.scriptId) script.id = embed.scriptId;
-    script.src = embed.scriptSrc;
+    script.src = embed.scriptSrc || "";
     script.async = true;
     script.charset = "utf-8";
     container.appendChild(script);
@@ -57,7 +74,7 @@ export function AffiliateEmbed({ embedHtml }: { embedHtml?: string | null }) {
       restore();
       script.remove();
     };
-  }, [embed?.scriptId, embed?.scriptSrc]);
+  }, [embed?.kind, embed?.scriptId, embed?.scriptSrc]);
 
   if (!embed) return null;
 
@@ -71,9 +88,19 @@ export function AffiliateEmbed({ embedHtml }: { embedHtml?: string | null }) {
         }
       `}</style>
       <div className="mgs-embed aspect-video w-full overflow-hidden rounded-2xl bg-black">
-        <div ref={containerRef} className="h-full w-full">
-          <div className={embed.className || undefined} />
-        </div>
+        {embed.kind === "iframe" ? (
+          <iframe
+            className="h-full w-full"
+            src={embed.iframeSrc}
+            scrolling="no"
+            frameBorder={0}
+            allowFullScreen
+          />
+        ) : (
+          <div ref={containerRef} className="h-full w-full">
+            <div className={embed.className || undefined} />
+          </div>
+        )}
       </div>
     </div>
   );
