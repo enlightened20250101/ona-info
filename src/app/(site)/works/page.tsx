@@ -61,6 +61,36 @@ export default async function WorksPage({
       name: work.title,
     })),
   };
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "エロ動画の最新作はどこで見られますか？",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "最新のエロ動画・作品をこのページでまとめて確認できます。各作品ページから配信先へ進めます。",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "作品番号から検索できますか？",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "作品番号やタイトルで検索できます。上部の検索欄をご利用ください。",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "人気作品はどこで見られますか？",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "最新作品の中から人気作品をまとめて表示しています。",
+        },
+      },
+    ],
+  };
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
@@ -73,6 +103,11 @@ export default async function WorksPage({
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(listLd) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <Breadcrumbs
@@ -127,8 +162,26 @@ export default async function WorksPage({
           ))}
         </section>
         <section className="rounded-3xl border border-border bg-card p-6">
-          <h2 className="text-lg font-semibold">クイックリンク</h2>
+          <h2 className="text-lg font-semibold">もっと見る</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Link
+              href="/actresses"
+              className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              女優一覧
+            </Link>
+            <Link
+              href="/actresses/ranking"
+              className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              女優ランキング
+            </Link>
+            <Link
+              href="/works/ranking"
+              className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              作品ランキング
+            </Link>
             <Link
               href="/topics"
               className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"

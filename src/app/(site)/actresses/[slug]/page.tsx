@@ -317,6 +317,18 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
               トピック一覧
             </Link>
             <Link
+              href="/actresses/ranking"
+              className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              女優ランキング
+            </Link>
+            <Link
+              href="/works/ranking"
+              className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"
+            >
+              作品ランキング
+            </Link>
+            <Link
               href="/genres"
               className="rounded-2xl border border-border bg-white p-4 text-sm font-semibold text-foreground transition hover:-translate-y-1 hover:border-accent/40"
             >

@@ -26,6 +26,7 @@ export default async function sitemap({ id }: { id: number }): Promise<MetadataR
     { route: "/company", priority: 0.4, changeFrequency: "monthly" as const },
     { route: "/privacy", priority: 0.3, changeFrequency: "yearly" as const },
     { route: "/actresses/ranking", priority: 0.7, changeFrequency: "daily" as const },
+    { route: "/works/ranking", priority: 0.7, changeFrequency: "daily" as const },
   ];
 
   const articles = await getLatestArticles(MAX_ARTICLES);
