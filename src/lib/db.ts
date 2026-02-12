@@ -239,3 +239,11 @@ export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
     .filter((row) => row.related_actresses.includes(actressSlug))
     .slice(0, limit);
 }
+
+export async function refreshActressStats() {
+  const client = getSupabase();
+  const { error } = await client.rpc("refresh_actress_stats");
+  if (error) {
+    throw error;
+  }
+}

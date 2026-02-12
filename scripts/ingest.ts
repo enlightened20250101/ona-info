@@ -13,7 +13,13 @@ import { normalizeRanking } from "@/normalizers/normalize_ranking";
 import { normalizeSummary } from "@/normalizers/normalize_summary";
 import { normalizeRssTopic } from "@/normalizers/normalize_rss_topic";
 import { extractTags, pickRelatedWorks, tagLabel, tagSummary } from "@/lib/tagging";
-import { findWorksByActressSlug, getLatestByType, getWorkSlugs, upsertArticle } from "@/lib/db";
+import {
+  findWorksByActressSlug,
+  getLatestByType,
+  getWorkSlugs,
+  refreshActressStats,
+  upsertArticle,
+} from "@/lib/db";
 import { slugify } from "@/lib/text";
 import { Article, ArticleImage } from "@/lib/schema";
 import { v4 as uuidv4 } from "uuid";
@@ -412,6 +418,17 @@ function parseMode() {
   return "";
 }
 
+async function refreshActressStatsSafe() {
+  const refresh = process.env.REFRESH_ACTRESS_STATS ?? "true";
+  if (refresh === "false") return;
+  try {
+    await refreshActressStats();
+    logLine("Actress stats refreshed.");
+  } catch (error) {
+    logLine(`Actress stats refresh failed: ${String(error)}`);
+  }
+}
+
 async function run() {
   const startedAt = new Date();
   logLine("Ingest started");
@@ -459,9 +476,11 @@ async function run() {
       const summary = `Duration: ${Math.round(durationMs / 1000)}s | Success: ${successCount}/${tasks.length}`;
       await sendNotification(`Ingest finished with partial failures\n${summary}\n${reportLines.join("\n")}`);
       logLine("Ingest finished: partial success");
+      await refreshActressStatsSafe();
       return;
     }
 
+    await refreshActressStatsSafe();
     logLine("Ingest finished: success");
     return;
   }
@@ -505,9 +524,11 @@ async function run() {
     const summary = `Duration: ${Math.round(durationMs / 1000)}s | Success: ${successCount}/${tasks.length}`;
     await sendNotification(`Ingest finished with partial failures\n${summary}\n${reportLines.join("\n")}`);
     logLine("Ingest finished: partial success");
+    await refreshActressStatsSafe();
     return;
   }
 
+  await refreshActressStatsSafe();
   logLine("Ingest finished: success");
 }
 
