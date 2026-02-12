@@ -58,7 +58,29 @@ type Database = {
         Relationships: [];
       };
     };
-    Views: {};
+    Views: {
+      actress_stats: {
+        Row: {
+          actress: string;
+          work_count: number;
+          latest_published_at: string | null;
+        };
+      };
+      genre_stats: {
+        Row: {
+          genre: string;
+          work_count: number;
+          latest_published_at: string | null;
+        };
+      };
+      maker_stats: {
+        Row: {
+          maker: string;
+          work_count: number;
+          latest_published_at: string | null;
+        };
+      };
+    };
     Functions: {};
     Enums: {};
     CompositeTypes: {};
@@ -246,4 +268,82 @@ export async function refreshActressStats() {
   if (error) {
     throw error;
   }
+}
+
+export async function refreshSiteStats() {
+  const client = getSupabase();
+  const { error } = await client.rpc("refresh_site_stats" as never);
+  if (error) {
+    throw error;
+  }
+}
+
+export type ActressStat = Database["public"]["Views"]["actress_stats"]["Row"];
+export type GenreStat = Database["public"]["Views"]["genre_stats"]["Row"];
+export type MakerStat = Database["public"]["Views"]["maker_stats"]["Row"];
+
+export async function getActressStats(limit = 5000) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("actress_stats")
+    .select("*")
+    .order("actress", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getActressRanking(limit = 100) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("actress_stats")
+    .select("*")
+    .order("work_count", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getGenreStats(limit = 5000) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("genre_stats")
+    .select("*")
+    .order("genre", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getTopGenres(limit = 20) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("genre_stats")
+    .select("*")
+    .order("work_count", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getMakerStats(limit = 5000) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("maker_stats")
+    .select("*")
+    .order("maker", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getTopMakers(limit = 20) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("maker_stats")
+    .select("*")
+    .order("work_count", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
 }

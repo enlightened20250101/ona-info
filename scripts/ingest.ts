@@ -18,6 +18,7 @@ import {
   getLatestByType,
   getWorkSlugs,
   refreshActressStats,
+  refreshSiteStats,
   upsertArticle,
 } from "@/lib/db";
 import { slugify } from "@/lib/text";
@@ -422,10 +423,15 @@ async function refreshActressStatsSafe() {
   const refresh = process.env.REFRESH_ACTRESS_STATS ?? "true";
   if (refresh === "false") return;
   try {
-    await refreshActressStats();
+    await refreshSiteStats();
     logLine("Actress stats refreshed.");
   } catch (error) {
-    logLine(`Actress stats refresh failed: ${String(error)}`);
+    try {
+      await refreshActressStats();
+      logLine("Actress stats refreshed (fallback).");
+    } catch (innerError) {
+      logLine(`Actress stats refresh failed: ${String(innerError)}`);
+    }
   }
 }
 

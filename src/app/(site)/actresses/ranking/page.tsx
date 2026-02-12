@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { getLatestByType } from "@/lib/db";
+import { getActressRanking, getLatestByType } from "@/lib/db";
 import { SITE } from "@/lib/site";
-import { Article } from "@/lib/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -20,30 +19,19 @@ export const metadata: Metadata = {
   },
 };
 
-function buildActressRanking(works: Article[], limit = 50) {
-  const counts = new Map<string, number>();
-  const coverMap = new Map<string, string | null>();
-  works.forEach((work) => {
-    work.related_actresses.forEach((slug) => {
-      counts.set(slug, (counts.get(slug) ?? 0) + 1);
-      if (!coverMap.has(slug)) {
-        coverMap.set(slug, work.images?.[0]?.url ?? null);
-      }
-    });
-  });
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([slug, count]) => ({
-      slug,
-      count,
-      image: coverMap.get(slug) ?? null,
-    }));
-}
-
 export default async function ActressRankingPage() {
-  const works = await getLatestByType("work", 300);
-  const ranking = buildActressRanking(works, 50);
+  const works = await getLatestByType("work", 200);
+  const rankingStats = await getActressRanking(50);
+  const coverMap = new Map(
+    works
+      .filter((work) => work.images?.[0]?.url)
+      .flatMap((work) => work.related_actresses.map((slug) => [slug, work.images[0].url]))
+  );
+  const ranking = rankingStats.map((row) => ({
+    slug: row.actress,
+    count: row.work_count,
+    image: coverMap.get(row.actress) ?? null,
+  }));
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">

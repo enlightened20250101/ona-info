@@ -2,9 +2,8 @@ import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
-import { extractMetaTagsFromBody, tagLabel } from "@/lib/tagging";
-import { getLatestByType } from "@/lib/db";
-import { Article } from "@/lib/schema";
+import { tagLabel } from "@/lib/tagging";
+import { getMakerStats, getTopMakers } from "@/lib/db";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -22,16 +21,6 @@ export const metadata: Metadata = {
   },
 };
 
-function countMetaTags(works: Article[], prefix: string) {
-  const counts = new Map<string, number>();
-  works.forEach((work) => {
-    extractMetaTagsFromBody(work.body)
-      .filter((tag) => tag.startsWith(prefix))
-      .forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
-  });
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-}
-
 export default async function MakersPage({
   searchParams,
 }: {
@@ -42,8 +31,9 @@ export default async function MakersPage({
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
   const perPage = 30;
 
-  const works = await getLatestByType("work", 300);
-  const counts = countMetaTags(works, "maker:");
+  const stats = await getMakerStats(5000);
+  const topStats = await getTopMakers(12);
+  const counts = stats.map((row) => [`maker:${row.maker}`, row.work_count] as const);
   const makers = counts.map(([tag]) => tag).sort((a, b) => a.localeCompare(b));
   const filtered = query
     ? makers.filter((tag) => tagLabel(tag).toLowerCase().includes(query))
@@ -99,15 +89,18 @@ export default async function MakersPage({
         <section className="rounded-3xl border border-border bg-card p-6">
           <h2 className="text-lg font-semibold">人気メーカー</h2>
           <div className="mt-4 flex flex-wrap gap-2">
-            {counts.slice(0, 8).map(([tag, count]) => (
+            {topStats.slice(0, 8).map((row) => {
+              const tag = `maker:${row.maker}`;
+              return (
               <Link
                 key={tag}
                 href={`/tags/${encodeURIComponent(tag)}`}
                 className="rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-muted hover:border-accent/40"
               >
-                {tagLabel(tag)} ({count})
+                {tagLabel(tag)} ({row.work_count})
               </Link>
-            ))}
+            );
+            })}
           </div>
         </section>
 

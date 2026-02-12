@@ -2,8 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
-import { getLatestByType } from "@/lib/db";
-import { Article } from "@/lib/schema";
+import { getActressStats, getLatestByType } from "@/lib/db";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -21,14 +20,6 @@ export const metadata: Metadata = {
   },
 };
 
-function buildActressList(works: Article[]) {
-  const set = new Set<string>();
-  works.forEach((work) => {
-    work.related_actresses.forEach((slug) => set.add(slug));
-  });
-  return Array.from(set).sort();
-}
-
 export default async function ActressesPage({
   searchParams,
 }: {
@@ -38,8 +29,9 @@ export default async function ActressesPage({
   const query = (sp.q ?? "").trim().toLowerCase();
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
   const perPage = 30;
-  const works = await getLatestByType("work", 2000);
-  const actresses = buildActressList(works);
+  const works = await getLatestByType("work", 200);
+  const stats = await getActressStats(10000);
+  const actresses = stats.map((row) => row.actress);
   const filtered = query
     ? actresses.filter((slug) => slug.toLowerCase().includes(query))
     : actresses;

@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { Metadata } from "next";
-import { extractMetaTagsFromBody, extractTags, tagLabel } from "@/lib/tagging";
-import { getLatestArticles, getLatestByType } from "@/lib/db";
+import { extractTags, tagLabel } from "@/lib/tagging";
+import {
+  getActressRanking,
+  getLatestArticles,
+  getLatestByType,
+  getTopGenres,
+} from "@/lib/db";
 import { buildPagination } from "@/lib/pagination";
 import { Article } from "@/lib/schema";
 import { SITE } from "@/lib/site";
@@ -39,41 +44,7 @@ function buildPopularTags(texts: string[], limit = 8) {
     .map(([tag]) => tag);
 }
 
-function buildPopularMetaTags(works: Article[], prefix: string, limit = 8) {
-  const counts = new Map<string, number>();
-  works.forEach((work) => {
-    extractMetaTagsFromBody(work.body)
-      .filter((tag) => tag.startsWith(prefix))
-      .forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
-  });
-
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([tag]) => tag);
-}
-
-function buildPopularActresses(works: Article[], limit = 8) {
-  const counts = new Map<string, number>();
-  const sampleImage = new Map<string, string | null>();
-  works.forEach((work) => {
-    work.related_actresses.forEach((slug) => {
-      counts.set(slug, (counts.get(slug) ?? 0) + 1);
-      if (!sampleImage.has(slug)) {
-        sampleImage.set(slug, work.images?.[0]?.url ?? null);
-      }
-    });
-  });
-
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([slug, count]) => ({
-      slug,
-      count,
-      image: sampleImage.get(slug) ?? null,
-    }));
-}
+ 
 export default async function Home({
   searchParams,
 }: {
@@ -105,8 +76,14 @@ export default async function Home({
   const popularTags = buildPopularTags(
     dailyTopics.map((topic) => `${topic.title} ${topic.summary}`)
   );
-  const popularGenres = buildPopularMetaTags(latestWorks, "genre:");
-  const popularActresses = buildPopularActresses(latestWorks, 8);
+  const topGenres = await getTopGenres(8);
+  const popularGenres = topGenres.map((row) => `genre:${row.genre}`);
+  const topActresses = await getActressRanking(8);
+  const popularActresses = topActresses.map((row) => ({
+    slug: row.actress,
+    count: row.work_count,
+    image: latestWorks.find((work) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ?? null,
+  }));
   const heroWorks = latestWorks.filter((work) => work.images[0]?.url).slice(0, 9);
   const visualWorks = latestWorks.slice(0, 12);
   const visualArticles = latestPage.slice(0, 12);
