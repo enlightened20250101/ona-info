@@ -290,7 +290,7 @@ export async function getActressStats(limit = 5000) {
     .order("actress", { ascending: true })
     .limit(limit);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as ActressStat[];
 }
 
 export async function getActressRanking(limit = 100) {
@@ -301,7 +301,7 @@ export async function getActressRanking(limit = 100) {
     .order("work_count", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as ActressStat[];
 }
 
 export async function getGenreStats(limit = 5000) {
@@ -312,7 +312,7 @@ export async function getGenreStats(limit = 5000) {
     .order("genre", { ascending: true })
     .limit(limit);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as GenreStat[];
 }
 
 export async function getTopGenres(limit = 20) {
@@ -323,7 +323,7 @@ export async function getTopGenres(limit = 20) {
     .order("work_count", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as GenreStat[];
 }
 
 export async function getMakerStats(limit = 5000) {
@@ -334,7 +334,7 @@ export async function getMakerStats(limit = 5000) {
     .order("maker", { ascending: true })
     .limit(limit);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as MakerStat[];
 }
 
 export async function getTopMakers(limit = 20) {
@@ -345,5 +345,5 @@ export async function getTopMakers(limit = 20) {
     .order("work_count", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as MakerStat[];
 }
