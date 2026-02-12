@@ -102,7 +102,7 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
     const releaseDate = item?.date ?? item?.release_date ?? null;
     const normalizedContentId = String(contentId ?? "").trim().toLowerCase();
     const isVr =
-      /^vr/i.test(normalizedContentId) || genre.some((value) => /vr/i.test(String(value)));
+      /^vr/i.test(normalizedContentId) || genre.some((value: string) => /vr/i.test(value));
     if (skipVr && isVr) {
       continue;
     }
