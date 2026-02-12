@@ -39,7 +39,7 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
   const nowPrintingPattern = /now[_-]?printing/i;
   const fetchedAt = new Date().toISOString();
   const skipVr = getEnv("DMM_SKIP_VR", "true") !== "false";
-  const validateEmbed = getEnv("DMM_EMBED_VALIDATE", "false") === "true";
+  const validateEmbed = getEnv("DMM_EMBED_VALIDATE", "true") === "true";
   const validateThumb = getEnv("DMM_VALIDATE_THUMBNAIL", "false") === "true";
   const embedAffiliateId =
     getEnv("DMM_EMBED_AFFILIATE_ID", "") ||
@@ -214,7 +214,13 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
             }
           );
           const html = await embedResponse.text();
-          if (!embedResponse.ok || /404 Not Found/i.test(html) || /指定されたページが見つかりません/i.test(html)) {
+          const isMissing =
+            !embedResponse.ok ||
+            /404 Not Found/i.test(html) ||
+            /指定されたページが見つかりません/i.test(html) ||
+            /class="css-dq90ix"/i.test(html) ||
+            /サイトトップへ/i.test(html);
+          if (isMissing) {
             embedHtml = "";
           }
         }
