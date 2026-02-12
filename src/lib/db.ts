@@ -212,8 +212,9 @@ export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
     .from("articles")
     .select("*")
     .eq("type", "work")
+    .contains("related_actresses", [actressSlug])
     .order("published_at", { ascending: false })
-    .limit(200);
+    .limit(Math.max(limit, 50));
 
   if (error) {
     throw error;
@@ -221,6 +222,5 @@ export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
 
   return (data ?? [])
     .map((row) => normalizeArticle(row as Article))
-    .filter((row) => row.related_actresses.includes(actressSlug))
     .slice(0, limit);
 }
