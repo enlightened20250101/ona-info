@@ -96,6 +96,13 @@ type Database = {
           latest_published_at: string | null;
         };
       };
+      actress_covers: {
+        Row: {
+          actress: string;
+          cover_url: string | null;
+          latest_published_at: string | null;
+        };
+      };
     };
     Functions: {};
     Enums: {};
@@ -404,21 +411,15 @@ export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
     .slice(0, limit);
 }
 
-export async function getLatestCoverByActressSlug(actressSlug: string) {
+export async function getActressCovers(actresses: string[]) {
+  if (actresses.length === 0) return new Map<string, string | null>();
   const client = getSupabase();
   const { data, error } = await client
-    .from("articles")
-    .select("images")
-    .eq("type", "work")
-    .contains("related_actresses", [actressSlug])
-    .order("published_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .from("actress_covers")
+    .select("actress,cover_url")
+    .in("actress", actresses);
   if (error) throw error;
-  const row = data as { images?: Json } | null;
-  if (!row) return null;
-  const images = parseArray<{ url: string; alt: string }>(row.images);
-  return images?.[0]?.url ?? null;
+  return new Map((data ?? []).map((row) => [row.actress, row.cover_url ?? null]));
 }
 
 export async function refreshActressStats() {
@@ -441,6 +442,7 @@ export type ActressStat = Database["public"]["Views"]["actress_stats"]["Row"];
 export type GenreStat = Database["public"]["Views"]["genre_stats"]["Row"];
 export type MakerStat = Database["public"]["Views"]["maker_stats"]["Row"];
 export type TagStat = Database["public"]["Views"]["tag_stats"]["Row"];
+export type ActressCoverStat = Database["public"]["Views"]["actress_covers"]["Row"];
 
 export async function getActressStats(limit = 5000) {
   const client = getSupabase();

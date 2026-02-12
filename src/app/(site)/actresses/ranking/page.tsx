@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import {
-  getActressRanking,
-  getLatestByType,
-  getLatestCoverByActressSlug,
-} from "@/lib/db";
+import { getActressCovers, getActressRanking, getLatestByType } from "@/lib/db";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -26,10 +22,7 @@ export const metadata: Metadata = {
 export default async function ActressRankingPage() {
   const works = await getLatestByType("work", 200);
   const rankingStats = await getActressRanking(50);
-  const coverEntries = await Promise.all(
-    rankingStats.map(async (row) => [row.actress, await getLatestCoverByActressSlug(row.actress)] as const)
-  );
-  const coverMap = new Map(coverEntries);
+  const coverMap = await getActressCovers(rankingStats.map((row) => row.actress));
   const ranking = rankingStats.map((row) => ({
     slug: row.actress,
     count: row.work_count,
