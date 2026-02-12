@@ -3,6 +3,7 @@ import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { SITE } from "@/lib/site";
 import MobileNav from "@/components/MobileNav";
 import Footer from "@/components/Footer";
+import RouteProgress from "@/components/RouteProgress";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -58,6 +59,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={`${spaceGrotesk.variable} ${plexMono.variable} antialiased`}>
+        <RouteProgress />
         <MobileNav />
         {children}
         <Footer />

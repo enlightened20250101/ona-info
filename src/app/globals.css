@@ -71,7 +71,10 @@ a.group:active {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #f1e9e4, #f8f2ee, #f1e9e4);
+  position: relative;
+  overflow: hidden;
+  background-color: #efe7e2;
+  background-image: linear-gradient(90deg, rgba(239, 231, 226, 0.8), rgba(255, 250, 246, 0.95), rgba(239, 231, 226, 0.8));
   background-size: 200% 200%;
   animation: skeleton 1.2s ease-in-out infinite;
 }
