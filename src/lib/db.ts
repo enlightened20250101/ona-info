@@ -415,8 +415,9 @@ export async function getLatestCoverByActressSlug(actressSlug: string) {
     .limit(1)
     .maybeSingle();
   if (error) throw error;
-  if (!data) return null;
-  const images = parseArray<{ url: string; alt: string }>(data.images);
+  const row = data as { images?: Json } | null;
+  if (!row) return null;
+  const images = parseArray<{ url: string; alt: string }>(row.images);
   return images?.[0]?.url ?? null;
 }
 
