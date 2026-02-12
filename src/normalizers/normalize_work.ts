@@ -5,10 +5,17 @@ import { getEnv, requireEnv } from "@/lib/env";
 
 // affiliate_url がAPIから返らない場合はテンプレで生成する方針。
 function buildAffiliateUrl(canonicalUrl: string, affiliateId: string) {
-  const template = getEnv("DMM_AFFILIATE_URL_TEMPLATE", "{url}?aff_id={affiliate_id}");
-  return template
-    .replace("{url}", canonicalUrl)
-    .replace("{affiliate_id}", affiliateId);
+  if (!canonicalUrl) return "";
+  try {
+    const url = new URL(canonicalUrl);
+    if (!url.searchParams.has("aff_id")) {
+      url.searchParams.set("aff_id", affiliateId);
+    }
+    return url.toString();
+  } catch {
+    const separator = canonicalUrl.includes("?") ? "&" : "?";
+    return `${canonicalUrl}${separator}aff_id=${affiliateId}`;
+  }
 }
 
 export function normalizeFanzaWork(raw: RawFanzaWork, publishedAt: Date): Article | null {

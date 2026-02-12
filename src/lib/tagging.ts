@@ -78,10 +78,10 @@ export function tagLabel(tag: string) {
   const normalized = normalizeTag(tag);
   if (!normalized) return "タグ";
   if (normalized.startsWith("maker:")) {
-    return `メーカー:${normalized.replace("maker:", "")}`;
+    return normalized.replace("maker:", "");
   }
   if (normalized.startsWith("genre:")) {
-    return `ジャンル:${normalized.replace("genre:", "")}`;
+    return normalized.replace("genre:", "");
   }
   const labels: Record<string, string> = {
     newcomer: "新人",

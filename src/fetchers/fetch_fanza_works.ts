@@ -69,14 +69,30 @@ export async function fetchFanzaWorks(): Promise<RawFanzaWork[]> {
     const series = item?.iteminfo?.series?.[0]?.name ?? null;
     const releaseDate = item?.date ?? item?.release_date ?? null;
 
-    const imageCandidates = [
-      item?.imageURL?.large,
-      item?.imageURL?.list,
-      item?.imageURL?.small,
-      item?.imageURL?.sample,
-    ].filter(Boolean);
+    const imageCandidates: string[] = [];
+    const addImage = (value: unknown) => {
+      if (!value) return;
+      if (typeof value === "string") {
+        imageCandidates.push(value);
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((entry) => addImage(entry));
+        return;
+      }
+      if (typeof value === "object") {
+        Object.values(value as Record<string, unknown>).forEach((entry) => addImage(entry));
+      }
+    };
 
-    const images = imageCandidates.slice(0, 3).map((url: string, idx: number) => ({
+    addImage(item?.imageURL?.large);
+    addImage(item?.imageURL?.list);
+    addImage(item?.imageURL?.small);
+    addImage(item?.imageURL?.sample);
+    addImage(item?.sampleImageURL);
+
+    const uniqueImages = Array.from(new Set(imageCandidates.filter(Boolean))) as string[];
+    const images = uniqueImages.slice(0, 5).map((url: string, idx: number) => ({
       url,
       alt: `${title} ${idx + 1}`,
     }));
