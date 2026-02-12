@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { getActressRanking, getLatestByType } from "@/lib/db";
+import {
+  getActressRanking,
+  getLatestByType,
+  getLatestCoverByActressSlug,
+} from "@/lib/db";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -22,15 +26,17 @@ export const metadata: Metadata = {
 export default async function ActressRankingPage() {
   const works = await getLatestByType("work", 200);
   const rankingStats = await getActressRanking(50);
-  const coverMap = new Map(
-    works
-      .filter((work) => work.images?.[0]?.url)
-      .flatMap((work) => work.related_actresses.map((slug) => [slug, work.images[0].url]))
+  const coverEntries = await Promise.all(
+    rankingStats.map(async (row) => [row.actress, await getLatestCoverByActressSlug(row.actress)] as const)
   );
+  const coverMap = new Map(coverEntries);
   const ranking = rankingStats.map((row) => ({
     slug: row.actress,
     count: row.work_count,
-    image: coverMap.get(row.actress) ?? null,
+    image:
+      coverMap.get(row.actress) ??
+      works.find((work) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ??
+      null,
   }));
 
   return (

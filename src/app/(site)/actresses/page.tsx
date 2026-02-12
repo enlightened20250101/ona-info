@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
-import { getActressStats, getLatestByType } from "@/lib/db";
+import { getActressStats, getLatestByType, getLatestCoverByActressSlug } from "@/lib/db";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -92,6 +92,11 @@ export default async function ActressesPage({
     ],
   };
 
+  const coverEntries = await Promise.all(
+    pageItems.map(async (slug) => [slug, await getLatestCoverByActressSlug(slug)] as const)
+  );
+  const coverMap = new Map(coverEntries);
+
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
       <script
@@ -149,7 +154,9 @@ export default async function ActressesPage({
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {pageItems.map((slug) => {
-                const cover = works.find((work) => work.related_actresses.includes(slug))?.images?.[0]?.url;
+                const cover =
+                  coverMap.get(slug) ??
+                  works.find((work) => work.related_actresses.includes(slug))?.images?.[0]?.url;
                 return (
                   <Link
                     key={slug}

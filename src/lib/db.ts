@@ -404,6 +404,22 @@ export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
     .slice(0, limit);
 }
 
+export async function getLatestCoverByActressSlug(actressSlug: string) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("articles")
+    .select("images")
+    .eq("type", "work")
+    .contains("related_actresses", [actressSlug])
+    .order("published_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const images = parseArray<{ url: string; alt: string }>(data.images);
+  return images?.[0]?.url ?? null;
+}
+
 export async function refreshActressStats() {
   const client = getSupabase();
   const { error } = await client.rpc("refresh_actress_stats" as never);
