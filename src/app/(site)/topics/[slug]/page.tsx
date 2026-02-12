@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { extractTags, tagKeywords, tagLabel } from "@/lib/tagging";
-import { getArticleBySlug, getLatestByType } from "@/lib/db";
+import { getArticleBySlug, getArticlesBySlugs, getLatestByTypePage } from "@/lib/db";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -78,10 +78,8 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
     );
   }
 
-  const works = await getLatestByType("work", 50);
-  const relatedWorks = article.related_works
-    .map((slug) => works.find((work) => work.slug === slug))
-    .filter(Boolean);
+  const latestWorks = (await getLatestByTypePage("work", 1, 60)).items;
+  const relatedWorks = await getArticlesBySlugs("work", article.related_works);
   const relatedActresses = article.related_actresses;
   const tags = extractTags(`${article.title} ${article.summary}`);
   const keywordPool = tags.flatMap(tagKeywords);
@@ -187,7 +185,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
             <h2 className="text-lg font-semibold">関連女優</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {relatedActresses.map((actressSlug) => {
-                const cover = works.find((work) => work.related_actresses.includes(actressSlug))
+                const cover = latestWorks.find((work) => work.related_actresses.includes(actressSlug))
                   ?.images?.[0]?.url;
                 return (
                   <Link

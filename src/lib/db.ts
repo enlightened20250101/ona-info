@@ -282,6 +282,18 @@ export async function getWorksByMetaTagPage(
   };
 }
 
+export async function getArticlesBySlugs(type: ArticleType, slugs: string[]) {
+  if (slugs.length === 0) return [];
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("articles")
+    .select("*")
+    .eq("type", type)
+    .in("slug", slugs);
+  if (error) throw error;
+  return (data ?? []).map((row) => normalizeArticle(row as Article));
+}
+
 type SearchOrder = "newest" | "oldest" | "title";
 
 export async function searchArticlesPage(options: {
