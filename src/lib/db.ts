@@ -325,22 +325,49 @@ export async function searchArticlesPage(options: {
   const rawQuery = options.query.trim();
   const query = rawQuery.replace(/%/g, "\\%").replace(/_/g, "\\_");
 
+  const applyOrdering = <T>(builder: T & { order: Function }) => {
+    if (options.order === "oldest") {
+      return builder.order("published_at", { ascending: true });
+    }
+    if (options.order === "title") {
+      return builder.order("title", { ascending: true });
+    }
+    return builder.order("published_at", { ascending: false });
+  };
+
+  const applyType = <T>(builder: T & { eq: Function }) => {
+    if (!options.type) return builder;
+    return builder.eq("type", options.type);
+  };
+
+  if (!rawQuery) {
+    let fallback = client.from("articles").select("*", { count: "exact" });
+    fallback = applyType(fallback);
+    fallback = applyOrdering(fallback);
+    const { data, error, count } = await fallback.range(from, to);
+    if (error) throw error;
+    return {
+      items: (data ?? []).map((row) => normalizeArticle(row as Article)),
+      total: count ?? 0,
+    };
+  }
+
+  const likeQuery = `%${query}%`;
   let builder = client
     .from("articles")
     .select("*", { count: "exact" })
-    .textSearch("search_tsv", rawQuery, { type: "websearch", config: "simple" } as never);
-
-  if (options.type) {
-    builder = builder.eq("type", options.type);
-  }
-
-  if (options.order === "oldest") {
-    builder = builder.order("published_at", { ascending: true });
-  } else if (options.order === "title") {
-    builder = builder.order("title", { ascending: true });
-  } else {
-    builder = builder.order("published_at", { ascending: false });
-  }
+    .or(
+      [
+        `search_tsv.wfts.${rawQuery}`,
+        `title.ilike.${likeQuery}`,
+        `summary.ilike.${likeQuery}`,
+        `body.ilike.${likeQuery}`,
+        `slug.ilike.${likeQuery}`,
+        `related_actresses.ilike.${likeQuery}`,
+      ].join(",")
+    );
+  builder = applyType(builder);
+  builder = applyOrdering(builder);
 
   const { data, error, count } = await builder.range(from, to);
   if (error) throw error;
