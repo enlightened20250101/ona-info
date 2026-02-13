@@ -148,10 +148,26 @@ function parseArray<T>(value: unknown): T[] {
   return [];
 }
 
+function optimizeImageUrl(url: string | null | undefined) {
+  if (!url) return url ?? "";
+  const base = process.env.NEXT_PUBLIC_IMAGE_PROXY_BASE?.trim();
+  if (!base) return url;
+  const quality = (process.env.NEXT_PUBLIC_IMAGE_PROXY_QUALITY ?? "70").trim();
+  const width = (process.env.NEXT_PUBLIC_IMAGE_PROXY_WIDTH ?? "900").trim();
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}url=${encodeURIComponent(url)}&w=${encodeURIComponent(
+    width
+  )}&q=${encodeURIComponent(quality)}`;
+}
+
 function normalizeArticle(row: Article): Article {
+  const images = parseArray<{ url: string; alt: string }>(row.images).map((img) => ({
+    ...img,
+    url: optimizeImageUrl(img.url),
+  }));
   return {
     ...row,
-    images: parseArray(row.images),
+    images,
     meta_genres: parseArray(row.meta_genres),
     meta_makers: parseArray(row.meta_makers),
     related_works: parseArray(row.related_works),
@@ -363,7 +379,7 @@ export async function searchArticlesPage(options: {
         `summary.ilike.${likeQuery}`,
         `body.ilike.${likeQuery}`,
         `slug.ilike.${likeQuery}`,
-        `related_actresses.ilike.${likeQuery}`,
+        `related_actresses::text.ilike.${likeQuery}`,
       ].join(",")
     );
   builder = applyType(builder);
