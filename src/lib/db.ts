@@ -379,6 +379,7 @@ export async function searchArticlesPage(options: {
         `summary.ilike.${likeQuery}`,
         `body.ilike.${likeQuery}`,
         `slug.ilike.${likeQuery}`,
+        `related_actresses_text.ilike.${likeQuery}`,
       ].join(",")
     );
   builder = applyType(builder);
