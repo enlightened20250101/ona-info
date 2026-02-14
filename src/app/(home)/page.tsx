@@ -71,6 +71,12 @@ function isUpcoming(iso: string, now: Date) {
   return parsed.getTime() > now.getTime();
 }
 
+function isAvailable(iso: string, now: Date) {
+  const parsed = parsePublishedAt(iso);
+  if (!parsed) return true;
+  return parsed.getTime() <= now.getTime();
+}
+
 function pickRanked<T extends { slug: string; images: { url: string }[] }>(
   items: T[],
   count: number,
@@ -161,7 +167,7 @@ export default async function Home({
       null,
   }));
   const now = getJstNow();
-  const availableWorks = latestWorks.filter((work) => !isUpcoming(work.published_at, now));
+  const availableWorks = latestWorks.filter((work) => isAvailable(work.published_at, now));
   const upcomingWorks = latestWorks.filter((work) => isUpcoming(work.published_at, now));
   const heroCandidates = availableWorks.filter((work) => work.images[0]?.url);
   const heroWorks = pickDailyRandom(heroCandidates, 9);
@@ -188,7 +194,7 @@ export default async function Home({
   const monthlyRanking = pickRanked(monthlyPool, 8, "monthly", usedRanking);
   const visualWorks = availableWorks.slice(0, 12);
   const visualArticles = latestPage
-    .filter((article) => article.type !== "work" || !isUpcoming(article.published_at, now))
+    .filter((article) => article.type !== "work" || isAvailable(article.published_at, now))
     .slice(0, 12);
 
   return (
@@ -414,6 +420,51 @@ export default async function Home({
               </section>
             ) : null}
 
+            <section className="rounded-[28px] border border-border bg-card p-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted">
+                  新着作品
+                </h2>
+                <Link href="/works" className="text-xs font-semibold text-accent">
+                  一覧へ →
+                </Link>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {visualWorks.map((work) => (
+                  <Link
+                    key={work.id}
+                    href={`/works/${work.slug}`}
+                    className="group relative overflow-hidden rounded-2xl border border-border bg-white"
+                  >
+                    <div className="relative aspect-[4/3] w-full">
+                      {work.images[0]?.url ? (
+                        <img
+                          src={work.images[0].url}
+                          alt={work.images[0].alt}
+                          loading="lazy"
+                          decoding="async"
+                          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-accent-soft text-xs text-accent">
+                          No Image
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-90" />
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-white/70">
+                          {work.slug}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-white line-clamp-2">
+                          {work.title}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+
             {upcomingWorks.length > 0 ? (
               <section className="rounded-[28px] border border-border bg-card p-6">
                 <div className="flex items-center justify-between">
@@ -460,51 +511,6 @@ export default async function Home({
                 </div>
               </section>
             ) : null}
-
-            <section className="rounded-[28px] border border-border bg-card p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted">
-                  新着作品
-                </h2>
-                <Link href="/works" className="text-xs font-semibold text-accent">
-                  一覧へ →
-                </Link>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {visualWorks.map((work) => (
-                  <Link
-                    key={work.id}
-                    href={`/works/${work.slug}`}
-                    className="group relative overflow-hidden rounded-2xl border border-border bg-white"
-                  >
-                    <div className="relative aspect-[4/3] w-full">
-                      {work.images[0]?.url ? (
-                        <img
-                          src={work.images[0].url}
-                          alt={work.images[0].alt}
-                          loading="lazy"
-                          decoding="async"
-                          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-accent-soft text-xs text-accent">
-                          No Image
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-90" />
-                      <div className="absolute bottom-3 left-3 right-3">
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-white/70">
-                          {work.slug}
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-white line-clamp-2">
-                          {work.title}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
 
             <section>
               <div className="flex items-center justify-between">
