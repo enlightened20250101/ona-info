@@ -17,7 +17,7 @@ export default function GlobalTagSidebar() {
         {FIXED_TAGS.map((tag) => (
           <Link
             key={tag}
-            href={`/tags/${encodeURIComponent(tag)}`}
+            href={`/search?q=${encodeURIComponent(tag)}`}
             className="rounded-xl border border-border bg-white px-3 py-2 text-[12px] font-semibold text-muted hover:border-accent/40"
           >
             {tagLabel(tag)}

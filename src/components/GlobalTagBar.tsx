@@ -13,7 +13,7 @@ export default function GlobalTagBar() {
           {FIXED_TAGS.map((tag) => (
             <Link
               key={tag}
-              href={`/tags/${encodeURIComponent(tag)}`}
+              href={`/search?q=${encodeURIComponent(tag)}`}
               className="whitespace-nowrap rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted hover:border-accent/40"
             >
               {tagLabel(tag)}
