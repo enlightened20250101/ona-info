@@ -9,7 +9,7 @@ import {
   getTopTags,
 } from "@/lib/db";
 import { buildPagination } from "@/lib/pagination";
-import { Article } from "@/lib/schema";
+import HomeRankingTabs from "@/components/HomeRankingTabs";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -101,13 +101,6 @@ export default async function Home({
   const latestPage = latest.slice(start, start + perPage);
 
   const latestWorks = await getLatestByType("work", 120);
-  const latestTopics = await getLatestByType("topic", 12);
-  const summaryTopics = latestTopics.filter((topic) =>
-    topic.source_url.startsWith("internal:summary:")
-  );
-  const rankingTopics = latestTopics.filter((topic) =>
-    topic.source_url.startsWith("internal:ranking:")
-  );
 
   const popularTags = (await getTopTags(12)).map((row) => row.tag);
   const fixedTags = [
@@ -142,10 +135,11 @@ export default async function Home({
   const upcomingWorks = latestWorks.filter((work) => isUpcoming(work.published_at, now));
   const heroCandidates = availableWorks.filter((work) => work.images[0]?.url);
   const heroWorks = pickDailyRandom(heroCandidates, 9);
-  const recommendedWorks = pickDailyRandom(
-    availableWorks.filter((work) => work.images[0]?.url),
-    9
+  const heroSlugs = new Set(heroWorks.map((work) => work.slug));
+  const recommendedCandidates = availableWorks.filter(
+    (work) => work.images[0]?.url && !heroSlugs.has(work.slug)
   );
+  const recommendedWorks = pickDailyRandom(recommendedCandidates, 9);
   const dailyPool = availableWorks.filter(
     (work) => new Date(work.published_at).getTime() >= now.getTime() - 24 * 60 * 60 * 1000
   );
@@ -161,14 +155,6 @@ export default async function Home({
   const monthlyRanking = pickRanked(monthlyPool, 8, "monthly", usedRanking);
   const visualWorks = availableWorks.slice(0, 12);
   const visualArticles = latestPage.slice(0, 12);
-  const workMap = new Map(latestWorks.map((work) => [work.slug, work]));
-  const getTopicCover = (topic: Article) => {
-    const relatedSlug = topic.related_works?.[0];
-    if (relatedSlug && workMap.has(relatedSlug)) {
-      return workMap.get(relatedSlug)?.images?.[0]?.url ?? null;
-    }
-    return latestWorks[0]?.images?.[0]?.url ?? null;
-  };
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-10 sm:px-10">
@@ -246,9 +232,30 @@ export default async function Home({
         </div>
       </header>
 
-      <section className="mx-auto mt-10 w-full max-w-6xl">
+      <section className="mx-auto mt-6 w-full max-w-6xl">
+        <div className="sticky top-0 z-30 -mx-6 bg-background/95 px-6 py-3 backdrop-blur lg:hidden">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted">
+              Tags
+            </p>
+            <Link href="/tags" className="text-[11px] font-semibold text-accent">
+              一覧 →
+            </Link>
+          </div>
+          <div className="mt-2 flex flex-nowrap gap-2 overflow-x-auto pb-1">
+            {sidebarTags.map((tag) => (
+              <Link
+                key={tag}
+                href={`/tags/${encodeURIComponent(tag)}`}
+                className="whitespace-nowrap rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold text-muted hover:border-accent/40"
+              >
+                {tagLabel(tag)}
+              </Link>
+            ))}
+          </div>
+        </div>
         <div className="grid gap-6 lg:grid-cols-[190px_1fr]">
-          <aside className="rounded-2xl border border-border bg-card p-4">
+          <aside className="sticky top-24 hidden h-fit rounded-2xl border border-border bg-card p-4 lg:block">
             <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted">
               Tags
             </p>
@@ -320,45 +327,12 @@ export default async function Home({
                   一覧へ →
                 </Link>
               </div>
-              <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                {[
-                  { title: "日", items: dailyRanking },
-                  { title: "週", items: weeklyRanking },
-                  { title: "月", items: monthlyRanking },
-                ].map((group) => (
-                  <div key={group.title} className="rounded-2xl border border-border bg-white p-3">
-                    <p className="text-xs font-semibold text-muted">{group.title}ランキング</p>
-                    <div className="mt-3 grid gap-3">
-                      {group.items.map((work, index) => (
-                        <Link
-                          key={work.id}
-                          href={`/works/${work.slug}`}
-                          className="group flex gap-3 rounded-xl border border-border bg-card p-2 hover:border-accent/40"
-                        >
-                          <div className="relative h-16 w-24 overflow-hidden rounded-lg bg-accent-soft">
-                            {work.images[0]?.url ? (
-                              <img
-                                src={work.images[0].url}
-                                alt={work.images[0].alt}
-                                loading="lazy"
-                                decoding="async"
-                                className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                              />
-                            ) : (
-                              <div className="flex h-full items-center justify-center text-[10px] text-accent">
-                                No Image
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[11px] text-muted">#{index + 1}</p>
-                            <p className="text-sm font-semibold line-clamp-2">{work.title}</p>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+              <div className="mt-4">
+                <HomeRankingTabs
+                  daily={dailyRanking}
+                  weekly={weeklyRanking}
+                  monthly={monthlyRanking}
+                />
               </div>
             </section>
 
@@ -495,65 +469,6 @@ export default async function Home({
                 ))}
               </div>
             </section>
-
-            {(summaryTopics.length > 0 || rankingTopics.length > 0) ? (
-              <section className="grid gap-3 sm:grid-cols-2">
-                {summaryTopics.map((topic) => (
-                  <Link
-                    key={topic.id}
-                    href={`/topics/${topic.slug}`}
-                    className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent/40"
-                  >
-                    <div className="relative h-28 overflow-hidden bg-accent-soft">
-                      {getTopicCover(topic) ? (
-                        <img
-                          src={getTopicCover(topic) ?? ""}
-                          alt={topic.title}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
-                          Summary
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <p className="text-xs font-semibold text-muted">まとめ</p>
-                      <p className="mt-1 text-sm font-semibold">{topic.title}</p>
-                    </div>
-                  </Link>
-                ))}
-                {rankingTopics.map((topic) => (
-                  <Link
-                    key={topic.id}
-                    href={`/topics/${topic.slug}`}
-                    className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent/40"
-                  >
-                    <div className="relative h-28 overflow-hidden bg-accent-soft">
-                      {getTopicCover(topic) ? (
-                        <img
-                          src={getTopicCover(topic) ?? ""}
-                          alt={topic.title}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
-                          Ranking
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <p className="text-xs font-semibold text-muted">ランキング</p>
-                      <p className="mt-1 text-sm font-semibold">{topic.title}</p>
-                    </div>
-                  </Link>
-                ))}
-              </section>
-            ) : null}
 
             <section>
               <div className="flex items-center justify-between">
