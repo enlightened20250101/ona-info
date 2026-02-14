@@ -95,12 +95,12 @@ function isAvailable(iso: string, now: Date) {
 
 function getWorkReleaseDateFromBody(body: string | null | undefined) {
   if (!body) return null;
-  const match = body.match(/^\s*配信日[:：]\s*([^\n]+)/m);
+  const match = normalizeDateText(body).match(
+    /配信日[:：]?\s*([0-9]{4}[-/][0-9]{2}[-/][0-9]{2})(?:\s*([0-9]{2}:[0-9]{2}:[0-9]{2}))?/
+  );
   if (!match) return null;
-  const normalized = normalizeDateText(match[1]);
-  const parts = normalized.split(/\s+/).filter(Boolean);
-  const datePart = parts[0] ?? "";
-  const timePart = parts[1] ?? "";
+  const datePart = match[1] ?? "";
+  const timePart = match[2] ?? "";
   const value = timePart ? `${datePart} ${timePart}` : datePart;
   return parsePublishedAt(value);
 }
