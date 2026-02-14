@@ -516,7 +516,6 @@ export default async function Home({
               </div>
             </section>
           </div>
-        </div>
       </section>
     </div>
   );
