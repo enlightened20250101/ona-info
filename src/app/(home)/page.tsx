@@ -90,7 +90,6 @@ function pickRanked<T extends { slug: string; images: { url: string }[] }>(
   }
   const result: T[] = [];
   for (const item of shuffled) {
-    if (!item.images?.[0]?.url) continue;
     if (used.has(item.slug)) continue;
     used.add(item.slug);
     result.push(item);
@@ -131,12 +130,17 @@ export default async function Home({
   const availableWorks = latestWorks.filter((work) => isAvailable(work.published_at, now));
   const upcomingWorks = latestWorks.filter((work) => isUpcoming(work.published_at, now));
   const heroCandidates = availableWorks.filter((work) => work.images[0]?.url);
-  const heroWorks = pickDailyRandom(heroCandidates, 9);
+  const heroFallback = heroCandidates.length > 0 ? heroCandidates : availableWorks;
+  const heroWorks = pickDailyRandom(heroFallback, 9);
   const heroSlugs = new Set(heroWorks.map((work) => work.slug));
   const recommendedCandidates = availableWorks.filter(
     (work) => work.images[0]?.url && !heroSlugs.has(work.slug)
   );
-  const recommendedWorks = pickDailyRandom(recommendedCandidates, 9);
+  const recommendedFallback =
+    recommendedCandidates.length > 0
+      ? recommendedCandidates
+      : availableWorks.filter((work) => !heroSlugs.has(work.slug));
+  const recommendedWorks = pickDailyRandom(recommendedFallback, 9);
   const dailyPool = availableWorks.filter((work) => {
     const published = parsePublishedAt(work.published_at);
     return published ? published.getTime() >= now.getTime() - 48 * 60 * 60 * 1000 : false;
