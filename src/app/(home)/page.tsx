@@ -75,6 +75,25 @@ function isAvailable(iso: string, now: Date) {
   return parsed.getTime() <= now.getTime();
 }
 
+function getWorkReleaseDateFromBody(body: string | null | undefined) {
+  if (!body) return null;
+  const match = body.match(/^配信日:\s*(\d{4}-\d{2}-\d{2})/m);
+  if (!match) return null;
+  return parsePublishedAt(match[1]);
+}
+
+function isUpcomingWork(work: { published_at: string; body: string | null | undefined }, now: Date) {
+  const releaseDate = getWorkReleaseDateFromBody(work.body);
+  if (releaseDate) return releaseDate.getTime() > now.getTime();
+  return isUpcoming(work.published_at, now);
+}
+
+function isAvailableWork(work: { published_at: string; body: string | null | undefined }, now: Date) {
+  const releaseDate = getWorkReleaseDateFromBody(work.body);
+  if (releaseDate) return releaseDate.getTime() <= now.getTime();
+  return isAvailable(work.published_at, now);
+}
+
 function pickRanked<T extends { slug: string; images: { url: string }[] }>(
   items: T[],
   count: number,
@@ -127,8 +146,8 @@ export default async function Home({
       null,
   }));
   const now = getJstNow();
-  const availableWorks = latestWorks.filter((work) => isAvailable(work.published_at, now));
-  const upcomingWorks = latestWorks.filter((work) => isUpcoming(work.published_at, now));
+  const availableWorks = latestWorks.filter((work) => isAvailableWork(work, now));
+  const upcomingWorks = latestWorks.filter((work) => isUpcomingWork(work, now));
   const heroCandidates = availableWorks.filter((work) => work.images[0]?.url);
   const heroFallback = heroCandidates.length > 0 ? heroCandidates : availableWorks;
   const heroWorks = pickDailyRandom(heroFallback, 9);
