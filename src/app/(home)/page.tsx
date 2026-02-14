@@ -57,9 +57,15 @@ function getJstNow() {
 function parsePublishedAt(iso: string) {
   if (!iso) return null;
   const trimmed = iso.trim();
-  if (/^\d{4}[-/]\d{2}[-/]\d{2}$/.test(trimmed)) {
+  const dateOnly = /^\d{4}[-/]\d{2}[-/]\d{2}$/;
+  const dateTimeNoTz = /^\d{4}[-/]\d{2}[-/]\d{2}[ T]\d{2}:\d{2}:\d{2}$/;
+  if (dateOnly.test(trimmed)) {
     const normalized = trimmed.replace(/\//g, "-");
     return new Date(`${normalized}T00:00:00+09:00`);
+  }
+  if (dateTimeNoTz.test(trimmed)) {
+    const normalized = trimmed.replace(/\//g, "-").replace(" ", "T");
+    return new Date(`${normalized}+09:00`);
   }
   const normalized = trimmed.replace(/\//g, "-").replace(" ", "T");
   const parsed = new Date(normalized);
