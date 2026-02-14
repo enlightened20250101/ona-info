@@ -95,7 +95,7 @@ function isAvailable(iso: string, now: Date) {
 
 function getWorkReleaseDateFromBody(body: string | null | undefined) {
   if (!body) return null;
-  const match = body.match(/^配信日[:：]\s*([^\n]+)/m);
+  const match = body.match(/^\s*配信日[:：]\s*([^\n]+)/m);
   if (!match) return null;
   const normalized = normalizeDateText(match[1]);
   const parts = normalized.split(/\s+/).filter(Boolean);
