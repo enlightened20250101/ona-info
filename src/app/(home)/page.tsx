@@ -177,10 +177,9 @@ export default async function Home({
   }));
   const now = getJstNow();
   const availableWorks = latestWorks.filter((work) => isAvailableWork(work, now));
+  const byPublishedAt = latestWorks.filter((work) => isAvailableByPublishedAt(work, now));
   const fallbackAvailable =
-    availableWorks.length > 0
-      ? availableWorks
-      : latestWorks.filter((work) => isAvailableByPublishedAt(work, now));
+    availableWorks.length > 0 ? availableWorks : byPublishedAt.length > 0 ? byPublishedAt : latestWorks;
   const upcomingWorks = latestWorks.filter((work) => isUpcomingWork(work, now));
   const heroCandidates = fallbackAvailable.filter((work) => work.images[0]?.url);
   const heroFallback = heroCandidates.length > 0 ? heroCandidates : fallbackAvailable;
