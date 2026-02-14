@@ -72,15 +72,6 @@ function parsePublishedAt(iso: string) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function normalizeDateText(value: string) {
-  return value
-    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
-    .replace(/[／]/g, "/")
-    .replace(/[－―]/g, "-")
-    .replace(/[：]/g, ":")
-    .trim();
-}
-
 function isUpcoming(iso: string, now: Date) {
   const parsed = parsePublishedAt(iso);
   if (!parsed) return false;
@@ -93,27 +84,11 @@ function isAvailable(iso: string, now: Date) {
   return parsed.getTime() <= now.getTime();
 }
 
-function getWorkReleaseDateFromBody(body: string | null | undefined) {
-  if (!body) return null;
-  const match = normalizeDateText(body).match(
-    /配信日[:：]?\s*([0-9]{4}[-/][0-9]{2}[-/][0-9]{2})(?:\s*([0-9]{2}:[0-9]{2}:[0-9]{2}))?/
-  );
-  if (!match) return null;
-  const datePart = match[1] ?? "";
-  const timePart = match[2] ?? "";
-  const value = timePart ? `${datePart} ${timePart}` : datePart;
-  return parsePublishedAt(value);
-}
-
-function isUpcomingWork(work: { published_at: string; body: string | null | undefined }, now: Date) {
-  const releaseDate = getWorkReleaseDateFromBody(work.body);
-  if (releaseDate) return releaseDate.getTime() > now.getTime();
+function isUpcomingWork(work: { published_at: string }, now: Date) {
   return isUpcoming(work.published_at, now);
 }
 
-function isAvailableWork(work: { published_at: string; body: string | null | undefined }, now: Date) {
-  const releaseDate = getWorkReleaseDateFromBody(work.body);
-  if (releaseDate) return releaseDate.getTime() <= now.getTime();
+function isAvailableWork(work: { published_at: string }, now: Date) {
   return isAvailable(work.published_at, now);
 }
 
@@ -177,9 +152,7 @@ export default async function Home({
   }));
   const now = getJstNow();
   const availableWorks = latestWorks.filter((work) => isAvailableWork(work, now));
-  const byPublishedAt = latestWorks.filter((work) => isAvailableByPublishedAt(work, now));
-  const fallbackAvailable =
-    availableWorks.length > 0 ? availableWorks : byPublishedAt.length > 0 ? byPublishedAt : latestWorks;
+  const fallbackAvailable = availableWorks.length > 0 ? availableWorks : latestWorks;
   const upcomingWorks = latestWorks.filter((work) => isUpcomingWork(work, now));
   const heroCandidates = fallbackAvailable.filter((work) => work.images[0]?.url);
   const heroFallback = heroCandidates.length > 0 ? heroCandidates : fallbackAvailable;
