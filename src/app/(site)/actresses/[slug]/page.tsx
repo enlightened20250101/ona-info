@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { findWorksByActressSlug, getLatestByType } from "@/lib/db";
+import { findWorksByActressSlug, getActressStatBySlug, getLatestByType } from "@/lib/db";
 import { extractMetaTagsFromBody } from "@/lib/tagging";
 import { SITE } from "@/lib/site";
 
@@ -35,6 +35,7 @@ export async function generateMetadata({
 export default async function ActressPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
+  const actressStat = await getActressStatBySlug(slug);
   const works = await findWorksByActressSlug(slug, 20);
   const base = SITE.url.replace(/\/$/, "");
   const itemList = {
@@ -130,7 +131,8 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
           <p className="text-xs text-muted">actress</p>
           <h1 className="mt-2 text-3xl font-semibold">{slug}</h1>
           <p className="mt-2 text-sm text-muted">
-            {slug}のエロ動画・出演作品を無料でチェック。関連作品 {works.length}件
+            {slug}のエロ動画・出演作品を無料でチェック。関連作品{" "}
+            {actressStat?.work_count ?? works.length}件
           </p>
           {relatedTagsFromWorks.length > 0 ? (
             <p className="mt-2 text-sm text-muted">

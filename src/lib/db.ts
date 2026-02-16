@@ -636,6 +636,18 @@ export async function getActressStats(limit = 5000) {
   return (data ?? []) as ActressStat[];
 }
 
+export async function getActressStatBySlug(actress: string) {
+  if (!actress) return null;
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("actress_stats")
+    .select("*")
+    .eq("actress", actress)
+    .maybeSingle();
+  if (error) throw error;
+  return (data ?? null) as ActressStat | null;
+}
+
 export async function getActressRanking(limit = 100) {
   const client = getSupabase();
   const { data, error } = await client
