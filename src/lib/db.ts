@@ -590,7 +590,7 @@ export async function getWorksByActressPage(
 
   if (!primary.error && primary.data && primary.data.length > 0) {
     const total = primary.count ?? 0;
-    if (primary.data.length < safePerPage && total > primary.data.length) {
+    if (total < safePerPage * safePage) {
       const rescue = await client
         .from("articles")
         .select("*")
