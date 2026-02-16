@@ -570,6 +570,47 @@ export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
     .slice(0, limit);
 }
 
+export async function getWorksByActressPage(
+  actressSlug: string,
+  page = 1,
+  perPage = 20
+) {
+  const client = getSupabase();
+  const safePage = Math.max(1, page);
+  const safePerPage = Math.min(100, Math.max(1, perPage));
+  const from = (safePage - 1) * safePerPage;
+  const to = from + safePerPage - 1;
+  const primary = await client
+    .from("articles")
+    .select("*", { count: "exact" })
+    .eq("type", "work")
+    .contains("related_actresses", [actressSlug])
+    .order("published_at", { ascending: false })
+    .range(from, to);
+
+  if (!primary.error && primary.data && primary.data.length > 0) {
+    return {
+      items: (primary.data ?? []).map((row) => normalizeArticle(row as Article)),
+      total: primary.count ?? 0,
+    };
+  }
+
+  const fallback = await client
+    .from("articles")
+    .select("*", { count: "exact" })
+    .eq("type", "work")
+    .ilike("related_actresses_text", `%${actressSlug}%`)
+    .order("published_at", { ascending: false })
+    .range(from, to);
+  if (fallback.error) {
+    throw fallback.error;
+  }
+  return {
+    items: (fallback.data ?? []).map((row) => normalizeArticle(row as Article)),
+    total: fallback.count ?? 0,
+  };
+}
+
 export async function getActressCovers(actresses: string[]) {
   if (actresses.length === 0) return new Map<string, string | null>();
   const client = getSupabase();

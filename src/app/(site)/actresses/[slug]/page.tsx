@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { findWorksByActressSlug, getActressStatBySlug, getLatestByType } from "@/lib/db";
+import {
+  getActressStatBySlug,
+  getLatestByType,
+  getWorksByActressPage,
+} from "@/lib/db";
+import { buildPagination } from "@/lib/pagination";
 import { extractMetaTagsFromBody } from "@/lib/tagging";
 import { SITE } from "@/lib/site";
 
@@ -32,11 +37,21 @@ export async function generateMetadata({
   };
 }
 
-export default async function ActressPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ActressPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
+}) {
   const { slug: rawSlug } = await params;
+  const sp = await searchParams;
   const slug = decodeURIComponent(rawSlug);
+  const page = Math.max(1, Number(sp.page ?? "1") || 1);
+  const perPage = 20;
   const actressStat = await getActressStatBySlug(slug);
-  const works = await findWorksByActressSlug(slug, 20);
+  const worksResult = await getWorksByActressPage(slug, page, perPage);
+  const works = worksResult.items;
   const base = SITE.url.replace(/\/$/, "");
   const itemList = {
     "@context": "https://schema.org",
@@ -75,7 +90,12 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
         .filter((name) => name !== slug)
     )
   ).slice(0, 12);
-  const recentWorks = works.slice(0, 12);
+  const totalPages = Math.max(1, Math.ceil(worksResult.total / perPage));
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * perPage;
+  const startIndex = worksResult.total === 0 ? 0 : start + 1;
+  const endIndex = Math.min(start + perPage, worksResult.total);
+  const pagination = buildPagination(safePage, totalPages);
   const faqLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -132,7 +152,7 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
           <h1 className="mt-2 text-3xl font-semibold">{slug}</h1>
           <p className="mt-2 text-sm text-muted">
             {slug}のエロ動画・出演作品を無料でチェック。関連作品{" "}
-            {actressStat?.work_count ?? works.length}件
+            {actressStat?.work_count ?? worksResult.total}件
           </p>
           {relatedTagsFromWorks.length > 0 ? (
             <p className="mt-2 text-sm text-muted">
@@ -183,40 +203,62 @@ export default async function ActressPage({ params }: { params: Promise<{ slug: 
           )}
         </section>
 
-        {recentWorks.length > 0 ? (
-          <section className="rounded-3xl border border-border bg-card p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">最新の出演作品</h2>
-              <span className="text-xs text-muted">最新12件</span>
+        {worksResult.total > perPage ? (
+          <div className="flex flex-col gap-3 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+            <span>
+            {worksResult.total}件中 {startIndex}-{endIndex}件
+            </span>
+            <div className="flex w-full flex-wrap justify-center gap-2 sm:w-auto sm:justify-end">
+              {pagination.map((pageNum, index) => {
+                if (pageNum !== "...") {
+                  return (
+                    <Link
+                      key={pageNum}
+                      href={`/actresses/${encodeURIComponent(slug)}?page=${pageNum}`}
+                      className={`rounded-full px-3 py-1 ${
+                        pageNum === safePage
+                          ? "bg-accent text-white"
+                          : "border border-border bg-white hover:border-accent/40"
+                      }`}
+                    >
+                      {pageNum}
+                    </Link>
+                  );
+                }
+                const prev = pagination
+                  .slice(0, index)
+                  .reverse()
+                  .find((value) => value !== "...");
+                const next = pagination.slice(index + 1).find((value) => value !== "...");
+                const prevNum = typeof prev === "number" ? prev : null;
+                const nextNum = typeof next === "number" ? next : null;
+                const target =
+                  prevNum && nextNum
+                    ? Math.max(1, Math.min(totalPages, Math.floor((prevNum + nextNum) / 2)))
+                    : prevNum
+                      ? Math.max(1, Math.min(totalPages, prevNum + 1))
+                      : nextNum
+                        ? Math.max(1, Math.min(totalPages, nextNum - 1))
+                        : null;
+                if (!target || target === safePage) {
+                  return (
+                    <span key={`ellipsis-${index}`} className="px-2 text-muted">
+                      ...
+                    </span>
+                  );
+                }
+                return (
+                  <Link
+                    key={`ellipsis-${index}`}
+                    href={`/actresses/${encodeURIComponent(slug)}?page=${target}`}
+                    className="rounded-full border border-border bg-white px-3 py-1 hover:border-accent/40"
+                  >
+                    …
+                  </Link>
+                );
+              })}
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {recentWorks.map((work) => (
-                <Link
-                  key={work.id}
-                  href={`/works/${work.slug}`}
-                  className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
-                >
-                  {work.images?.[0]?.url ? (
-                    <img
-                      src={work.images[0].url}
-                      alt={work.images[0].alt}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  ) : (
-                    <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
-                      No Image
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <p className="text-xs text-muted">{work.slug}</p>
-                    <p className="mt-1 text-sm font-semibold line-clamp-2">{work.title}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
+          </div>
         ) : null}
 
         {recommendedWorks.length > 0 ? (
