@@ -525,7 +525,7 @@ export async function getArticleBySlug(slug: string) {
 
 export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
   const client = getSupabase();
-  const preferredLimit = Math.max(limit, 50);
+  const preferredLimit = Math.max(limit, 100);
   const { data, error } = await client
     .from("articles")
     .select("*")
@@ -540,13 +540,26 @@ export async function findWorksByActressSlug(actressSlug: string, limit = 8) {
       .slice(0, limit);
   }
 
+  const textFallback = await client
+    .from("articles")
+    .select("*")
+    .eq("type", "work")
+    .ilike("related_actresses_text", `%${actressSlug}%`)
+    .order("published_at", { ascending: false })
+    .limit(2000);
+  if (!textFallback.error && textFallback.data && textFallback.data.length > 0) {
+    return (textFallback.data ?? [])
+      .map((row) => normalizeArticle(row as Article))
+      .slice(0, limit);
+  }
+
   // Fallback: older rows may have non-array JSON; avoid hard failure.
   const fallback = await client
     .from("articles")
     .select("*")
     .eq("type", "work")
     .order("published_at", { ascending: false })
-    .limit(2000);
+    .limit(10000);
   if (fallback.error) {
     throw fallback.error;
   }
