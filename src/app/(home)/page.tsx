@@ -153,7 +153,7 @@ export default async function Home({
   const topActresses = await getActressRanking(8);
   const actressSlugs = topActresses.map((row) => row.actress);
   const actressCoverMap = await getActressCovers(actressSlugs);
-  const actressCoverPool = buildActressCoverPool(availableWorks);
+  const actressCoverPool = buildActressCoverPool(latestWorks);
   const popularActresses = topActresses.map((row) => ({
     slug: row.actress,
     count: row.work_count,
@@ -162,7 +162,7 @@ export default async function Home({
         row.actress,
         actressCoverPool,
         actressCoverMap.get(row.actress) ??
-          availableWorks.find((work) => work.related_actresses.includes(row.actress))
+          latestWorks.find((work) => work.related_actresses.includes(row.actress))
             ?.images?.[0]?.url ??
           null,
         "home"
