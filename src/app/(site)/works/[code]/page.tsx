@@ -45,6 +45,34 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function seedFromString(value: string) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) | 0;
+  }
+  return hash >>> 0;
+}
+
+function seededRandom(seed: number) {
+  let state = seed || 1;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0xffffffff;
+  };
+}
+
+function pickDailyRandom<T>(items: T[], count: number, seedKey: string) {
+  if (items.length <= count) return items;
+  const today = new Date().toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" });
+  const rand = seededRandom(seedFromString(`${today}-${seedKey}`));
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, count);
+}
+
 function highlightKeywords(text: string, keywords: string[]) {
   if (keywords.length === 0) return text;
   const unique = Array.from(new Set(keywords)).filter(Boolean);
@@ -453,9 +481,13 @@ async function RelatedSections({
   const base = SITE.url.replace(/\/$/, "");
   const now = getJstNow();
   const related = leadActress
-    ? (await findWorksByActressSlug(leadActress, 8))
-        .filter((work) => work.slug !== article.slug)
-        .filter((work) => isReleased(work.published_at, now))
+    ? pickDailyRandom(
+        (await findWorksByActressSlug(leadActress, 12))
+          .filter((work) => work.slug !== article.slug)
+          .filter((work) => isReleased(work.published_at, now)),
+        8,
+        `actress-${article.slug}`
+      )
     : [];
   const fallbackCover = article.images?.[0]?.url ?? null;
   const latestTopics = (await getLatestByTypePage("topic", 1, 40)).items;
@@ -466,13 +498,20 @@ async function RelatedSections({
     })
     .slice(0, 4);
   const latestWorks = (await getLatestByTypePageBefore("work", now.toISOString(), 1, 120)).items;
-  const recentWorks = latestWorks.filter((work) => work.slug !== article.slug).slice(0, 12);
+  const recentWorks = pickDailyRandom(
+    latestWorks.filter((work) => work.slug !== article.slug),
+    12,
+    `recent-${article.slug}`
+  );
   const sameGenre = article.meta_genres?.[0] ?? null;
   const sameGenreWorks = sameGenre
-    ? (await getWorksByGenre(sameGenre, 12))
-        .filter((work) => work.slug !== article.slug)
-        .filter((work) => isReleased(work.published_at, now))
-        .slice(0, 6)
+    ? pickDailyRandom(
+        (await getWorksByGenre(sameGenre, 18))
+          .filter((work) => work.slug !== article.slug)
+          .filter((work) => isReleased(work.published_at, now)),
+        6,
+        `genre-${article.slug}`
+      )
     : [];
   const seedTags = Array.from(
     new Set(
@@ -492,21 +531,26 @@ async function RelatedSections({
     ]);
     return seedTags.some((tag) => tags.has(tag));
   };
-  const similarWorks = latestWorks
-    .filter(
-      (work) =>
-        isSimilar(work) &&
-        !sameGenreWorks.some((picked) => picked.slug === work.slug)
-    )
-    .slice(0, 6);
-  const fallbackWorks = latestWorks
-    .filter(
+  const similarWorks = pickDailyRandom(
+    latestWorks
+      .filter(
+        (work) =>
+          isSimilar(work) &&
+          !sameGenreWorks.some((picked) => picked.slug === work.slug)
+      ),
+    6,
+    `similar-${article.slug}`
+  );
+  const fallbackWorks = pickDailyRandom(
+    latestWorks.filter(
       (work) =>
         work.slug !== article.slug &&
         !sameGenreWorks.some((picked) => picked.slug === work.slug) &&
         !similarWorks.some((picked) => picked.slug === work.slug)
-    )
-    .slice(0, 6);
+    ),
+    6,
+    `fallback-${article.slug}`
+  );
   const relatedList = [...sameGenreWorks, ...fallbackWorks].slice(0, 12);
   const relatedItemList = relatedList.length
     ? {
