@@ -6,7 +6,7 @@ const DMM_CREDIT_URL = "https://affiliate.dmm.com/api/";
 
 export default function Footer() {
   return (
-    <footer className="mt-16 border-t border-border bg-card/70 px-6 py-10 sm:px-10">
+    <footer className="mt-16 border-t border-border bg-card/70 px-6 py-10 sm:px-10 lg:px-12">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
