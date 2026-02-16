@@ -8,6 +8,7 @@ import {
   findWorksByActressSlug,
   getArticleBySlug,
   getLatestByTypePage,
+  getLatestByTypePageBefore,
   getWorksByGenre,
 } from "@/lib/db";
 import { SITE } from "@/lib/site";
@@ -27,6 +28,17 @@ function formatDate(iso: string) {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+function getJstNow() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+}
+
+function isReleased(iso: string, now: Date) {
+  if (!iso) return true;
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return true;
+  return parsed.getTime() <= now.getTime();
 }
 
 function escapeRegExp(value: string) {
@@ -439,10 +451,11 @@ async function RelatedSections({
   leadActress?: string;
 }) {
   const base = SITE.url.replace(/\/$/, "");
+  const now = getJstNow();
   const related = leadActress
-    ? (await findWorksByActressSlug(leadActress, 8)).filter(
-        (work) => work.slug !== article.slug
-      )
+    ? (await findWorksByActressSlug(leadActress, 8))
+        .filter((work) => work.slug !== article.slug)
+        .filter((work) => isReleased(work.published_at, now))
     : [];
   const fallbackCover = article.images?.[0]?.url ?? null;
   const latestTopics = (await getLatestByTypePage("topic", 1, 40)).items;
@@ -452,11 +465,14 @@ async function RelatedSections({
       return topicTags.some((tag) => baseTags.includes(tag));
     })
     .slice(0, 4);
-  const latestWorks = (await getLatestByTypePage("work", 1, 120)).items;
+  const latestWorks = (await getLatestByTypePageBefore("work", now.toISOString(), 1, 120)).items;
   const recentWorks = latestWorks.filter((work) => work.slug !== article.slug).slice(0, 12);
   const sameGenre = article.meta_genres?.[0] ?? null;
   const sameGenreWorks = sameGenre
-    ? (await getWorksByGenre(sameGenre, 12)).filter((work) => work.slug !== article.slug).slice(0, 6)
+    ? (await getWorksByGenre(sameGenre, 12))
+        .filter((work) => work.slug !== article.slug)
+        .filter((work) => isReleased(work.published_at, now))
+        .slice(0, 6)
     : [];
   const seedTags = Array.from(
     new Set(
