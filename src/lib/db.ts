@@ -467,6 +467,31 @@ export async function getLatestByTypePageBefore(
   };
 }
 
+export async function getLatestByTypePageAfter(
+  type: ArticleType,
+  afterIso: string,
+  page = 1,
+  perPage = 20
+) {
+  const client = getSupabase();
+  const safePage = Math.max(1, page);
+  const safePerPage = Math.min(100, Math.max(1, perPage));
+  const from = (safePage - 1) * safePerPage;
+  const to = from + safePerPage - 1;
+  const { data, error, count } = await client
+    .from("articles")
+    .select("*", { count: "exact" })
+    .eq("type", type)
+    .gt("published_at", afterIso)
+    .order("published_at", { ascending: true })
+    .range(from, to);
+  if (error) throw error;
+  return {
+    items: (data ?? []).map((row) => normalizeArticle(row as Article)),
+    total: count ?? 0,
+  };
+}
+
 export async function getWorkSlugs(limit = 2000) {
   const client = getSupabase();
   const { data, error } = await client

@@ -429,7 +429,7 @@ export default async function Home({
                   <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted">
                     予約作品
                   </h2>
-                  <Link href="/works" className="text-xs font-semibold text-accent">
+                  <Link href="/works/upcoming" className="text-xs font-semibold text-accent">
                     一覧へ →
                   </Link>
                 </div>
