@@ -458,11 +458,37 @@ async function RelatedSections({
   const sameGenreWorks = sameGenre
     ? (await getWorksByGenre(sameGenre, 12)).filter((work) => work.slug !== article.slug).slice(0, 6)
     : [];
+  const seedTags = Array.from(
+    new Set(
+      [
+        ...(article.meta_genres ?? []),
+        ...(article.meta_makers ?? []),
+        ...(article.related_actresses ?? []),
+      ].filter(Boolean)
+    )
+  );
+  const isSimilar = (work: Article) => {
+    if (work.slug === article.slug) return false;
+    const tags = new Set([
+      ...(work.meta_genres ?? []),
+      ...(work.meta_makers ?? []),
+      ...(work.related_actresses ?? []),
+    ]);
+    return seedTags.some((tag) => tags.has(tag));
+  };
+  const similarWorks = latestWorks
+    .filter(
+      (work) =>
+        isSimilar(work) &&
+        !sameGenreWorks.some((picked) => picked.slug === work.slug)
+    )
+    .slice(0, 6);
   const fallbackWorks = latestWorks
     .filter(
       (work) =>
         work.slug !== article.slug &&
-        !sameGenreWorks.some((picked) => picked.slug === work.slug)
+        !sameGenreWorks.some((picked) => picked.slug === work.slug) &&
+        !similarWorks.some((picked) => picked.slug === work.slug)
     )
     .slice(0, 6);
   const relatedList = [...sameGenreWorks, ...fallbackWorks].slice(0, 12);
