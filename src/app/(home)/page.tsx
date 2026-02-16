@@ -142,6 +142,7 @@ export default async function Home({
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * perPage;
   const latestPage = latest.slice(start, start + perPage);
+  const pagination = buildPagination(safePage, totalPages);
 
   const now = getJstNow();
   const nowIso = now.toISOString();
@@ -508,11 +509,11 @@ export default async function Home({
                   );
                 })}
               </div>
-              <div className="mt-4 flex items-center justify-between text-xs text-muted">
+              <div className="mt-4 flex flex-col gap-3 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
                 <span>
                   {latest.length}件中 {start + 1}-{Math.min(start + perPage, latest.length)}件
                 </span>
-                <div className="flex gap-2">
+                <div className="flex w-full flex-wrap justify-center gap-2 sm:w-auto sm:justify-end">
                   {safePage > 1 ? (
                     <Link
                       href={`/?page=${safePage - 1}`}
@@ -521,25 +522,54 @@ export default async function Home({
                       前へ
                     </Link>
                   ) : null}
-                  {buildPagination(safePage, totalPages).map((pageNum, index) =>
-                    pageNum === "..." ? (
-                      <span key={`ellipsis-${index}`} className="px-2 text-muted">
-                        ...
-                      </span>
-                    ) : (
+                  {pagination.map((pageNum, index) => {
+                    if (pageNum !== "...") {
+                      return (
+                        <Link
+                          key={pageNum}
+                          href={`/?page=${pageNum}`}
+                          className={`rounded-full px-3 py-1 ${
+                            pageNum === safePage
+                              ? "bg-accent text-white"
+                              : "border border-border bg-white hover:border-accent/40"
+                          }`}
+                        >
+                          {pageNum}
+                        </Link>
+                      );
+                    }
+                    const prev = pagination
+                      .slice(0, index)
+                      .reverse()
+                      .find((value) => value !== "...");
+                    const next = pagination.slice(index + 1).find((value) => value !== "...");
+                    const prevNum = typeof prev === "number" ? prev : null;
+                    const nextNum = typeof next === "number" ? next : null;
+                    const target =
+                      prevNum && nextNum
+                        ? Math.max(1, Math.min(totalPages, Math.floor((prevNum + nextNum) / 2)))
+                        : prevNum
+                          ? Math.max(1, Math.min(totalPages, prevNum + 1))
+                          : nextNum
+                            ? Math.max(1, Math.min(totalPages, nextNum - 1))
+                            : null;
+                    if (!target || target === safePage) {
+                      return (
+                        <span key={`ellipsis-${index}`} className="px-2 text-muted">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
                       <Link
-                        key={pageNum}
-                        href={`/?page=${pageNum}`}
-                        className={`rounded-full px-3 py-1 ${
-                          pageNum === safePage
-                            ? "bg-accent text-white"
-                            : "border border-border bg-white hover:border-accent/40"
-                        }`}
+                        key={`ellipsis-${index}`}
+                        href={`/?page=${target}`}
+                        className="rounded-full border border-border bg-white px-3 py-1 hover:border-accent/40"
                       >
-                        {pageNum}
+                        …
                       </Link>
-                    )
-                  )}
+                    );
+                  })}
                   {safePage < totalPages ? (
                     <Link
                       href={`/?page=${safePage + 1}`}
