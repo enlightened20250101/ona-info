@@ -16,9 +16,13 @@ function seededRandom(seed: number) {
   };
 }
 
-export function buildActressCoverPool(works: Article[]) {
+export function buildActressCoverPool(
+  works: Article[],
+  options: { singleOnly?: boolean } = {}
+) {
   const pool = new Map<string, string[]>();
   works.forEach((work) => {
+    if (options.singleOnly && work.related_actresses.length !== 1) return;
     const url = work.images?.[0]?.url;
     if (!url) return;
     work.related_actresses.forEach((slug) => {

@@ -24,19 +24,22 @@ export default async function ActressRankingPage() {
   const works = await getLatestByType("work", 200);
   const rankingStats = await getActressRanking(50);
   const coverMap = await getActressCovers(rankingStats.map((row) => row.actress));
-  const coverPool = buildActressCoverPool(works);
+  const coverPoolSingle = buildActressCoverPool(works, { singleOnly: true });
+  const coverPoolAll = buildActressCoverPool(works);
   const ranking = rankingStats.map((row) => ({
     slug: row.actress,
     count: row.work_count,
     image:
+      pickDailyRandomCover(row.actress, coverPoolSingle, null, "ranking-single") ??
       pickDailyRandomCover(
         row.actress,
-        coverPool,
+        coverPoolAll,
         coverMap.get(row.actress) ??
           works.find((work) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ??
           null,
         "ranking"
-      ) ?? null,
+      ) ??
+      null,
   }));
 
   return (

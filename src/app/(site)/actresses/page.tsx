@@ -95,7 +95,8 @@ export default async function ActressesPage({
   };
 
   const coverMap = await getActressCovers(pageItems);
-  const worksByActress = buildActressCoverPool(works);
+  const worksByActressSingle = buildActressCoverPool(works, { singleOnly: true });
+  const worksByActressAll = buildActressCoverPool(works);
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
@@ -154,7 +155,14 @@ export default async function ActressesPage({
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {pageItems.map((slug) => {
-                const cover = pickDailyRandomCover(slug, worksByActress, coverMap.get(slug) ?? null);
+                const cover =
+                  pickDailyRandomCover(
+                    slug,
+                    worksByActressSingle,
+                    null,
+                    "single-only"
+                  ) ??
+                  pickDailyRandomCover(slug, worksByActressAll, coverMap.get(slug) ?? null);
                 return (
                   <Link
                     key={slug}
