@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { getActressCovers, getActressRanking, getLatestByType } from "@/lib/db";
+import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +24,19 @@ export default async function ActressRankingPage() {
   const works = await getLatestByType("work", 200);
   const rankingStats = await getActressRanking(50);
   const coverMap = await getActressCovers(rankingStats.map((row) => row.actress));
+  const coverPool = buildActressCoverPool(works);
   const ranking = rankingStats.map((row) => ({
     slug: row.actress,
     count: row.work_count,
     image:
-      coverMap.get(row.actress) ??
-      works.find((work) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ??
-      null,
+      pickDailyRandomCover(
+        row.actress,
+        coverPool,
+        coverMap.get(row.actress) ??
+          works.find((work) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ??
+          null,
+        "ranking"
+      ) ?? null,
   }));
 
   return (

@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { AffiliateEmbed } from "@/components/AffiliateEmbed";
 import { extractTags, tagKeywords, tagLabel } from "@/lib/tagging";
+import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
 import {
   findWorksByActressSlug,
   getArticleBySlug,
@@ -503,6 +504,7 @@ async function RelatedSections({
     12,
     `recent-${article.slug}`
   );
+  const actressCoverPool = buildActressCoverPool(latestWorks);
   const sameGenre = article.meta_genres?.[0] ?? null;
   const sameGenreWorks = sameGenre
     ? pickDailyRandom(
@@ -581,7 +583,7 @@ async function RelatedSections({
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {article.related_actresses.map((slug) => {
               const cover =
-                related.find((work) => work.related_actresses.includes(slug))?.images?.[0]?.url ??
+                pickDailyRandomCover(slug, actressCoverPool, fallbackCover, "work-related") ??
                 fallbackCover;
               return (
                 <Link

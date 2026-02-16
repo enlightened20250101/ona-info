@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
 import { getActressCovers, getActressStats, getLatestByType } from "@/lib/db";
+import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -19,29 +20,6 @@ export const metadata: Metadata = {
     type: "website",
   },
 };
-
-function seedFromString(value: string) {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash * 31 + value.charCodeAt(i)) | 0;
-  }
-  return hash >>> 0;
-}
-
-function seededRandom(seed: number) {
-  let state = seed || 1;
-  return () => {
-    state = (state * 1664525 + 1013904223) >>> 0;
-    return state / 0xffffffff;
-  };
-}
-
-function pickDailyRandomIndex(size: number, key: string) {
-  if (size <= 1) return 0;
-  const today = new Date().toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" });
-  const rand = seededRandom(seedFromString(`${today}-${key}`));
-  return Math.floor(rand() * size);
-}
 
 export default async function ActressesPage({
   searchParams,
@@ -117,16 +95,7 @@ export default async function ActressesPage({
   };
 
   const coverMap = await getActressCovers(pageItems);
-  const worksByActress = new Map<string, string[]>();
-  works.forEach((work) => {
-    const url = work.images?.[0]?.url;
-    if (!url) return;
-    work.related_actresses.forEach((slug) => {
-      const list = worksByActress.get(slug) ?? [];
-      list.push(url);
-      worksByActress.set(slug, list);
-    });
-  });
+  const worksByActress = buildActressCoverPool(works);
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
@@ -185,11 +154,7 @@ export default async function ActressesPage({
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {pageItems.map((slug) => {
-                const candidateCovers = worksByActress.get(slug) ?? [];
-                const cover =
-                  candidateCovers.length > 0
-                    ? candidateCovers[pickDailyRandomIndex(candidateCovers.length, slug)]
-                    : coverMap.get(slug) ?? null;
+                const cover = pickDailyRandomCover(slug, worksByActress, coverMap.get(slug) ?? null);
                 return (
                   <Link
                     key={slug}

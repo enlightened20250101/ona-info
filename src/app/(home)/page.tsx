@@ -10,6 +10,7 @@ import {
 import { buildPagination } from "@/lib/pagination";
 import HomeRankingTabs from "@/components/HomeRankingTabs";
 import { SITE } from "@/lib/site";
+import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
 
 export const dynamic = "force-dynamic";
 
@@ -152,13 +153,20 @@ export default async function Home({
   const topActresses = await getActressRanking(8);
   const actressSlugs = topActresses.map((row) => row.actress);
   const actressCoverMap = await getActressCovers(actressSlugs);
+  const actressCoverPool = buildActressCoverPool(availableWorks);
   const popularActresses = topActresses.map((row) => ({
     slug: row.actress,
     count: row.work_count,
     image:
-      actressCoverMap.get(row.actress) ??
-      availableWorks.find((work) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ??
-      null,
+      pickDailyRandomCover(
+        row.actress,
+        actressCoverPool,
+        actressCoverMap.get(row.actress) ??
+          availableWorks.find((work) => work.related_actresses.includes(row.actress))
+            ?.images?.[0]?.url ??
+          null,
+        "home"
+      ) ?? null,
   }));
   const upcomingWorks = latestWorks.filter((work) => isUpcomingWork(work, now));
   const heroCandidates = availableWorks.filter((work) => work.images[0]?.url);

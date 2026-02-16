@@ -4,6 +4,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { extractTags, tagKeywords, tagLabel } from "@/lib/tagging";
 import { getArticleBySlug, getArticlesBySlugs, getLatestByTypePage } from "@/lib/db";
 import { SITE } from "@/lib/site";
+import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
   }
 
   const latestWorks = (await getLatestByTypePage("work", 1, 60)).items;
+  const actressCoverPool = buildActressCoverPool(latestWorks);
   const relatedWorks = await getArticlesBySlugs("work", article.related_works);
   const relatedActresses = article.related_actresses;
   const tags = extractTags(`${article.title} ${article.summary}`);
@@ -185,8 +187,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
             <h2 className="text-lg font-semibold">関連女優</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {relatedActresses.map((actressSlug) => {
-                const cover = latestWorks.find((work) => work.related_actresses.includes(actressSlug))
-                  ?.images?.[0]?.url;
+                const cover = pickDailyRandomCover(actressSlug, actressCoverPool, null, "topic");
                 return (
                   <Link
                     key={actressSlug}
