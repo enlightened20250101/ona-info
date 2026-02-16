@@ -582,85 +582,36 @@ export async function getWorksByActressPage(
   const to = from + safePerPage - 1;
   const primary = await client
     .from("articles")
-    .select("*", { count: "exact" })
+    .select("*")
     .eq("type", "work")
     .contains("related_actresses", [actressSlug])
     .order("published_at", { ascending: false })
-    .range(from, to);
+    .limit(1000);
 
-  if (!primary.error && primary.data && primary.data.length > 0) {
-    const total = primary.count ?? 0;
-    if (total > 0 && total <= 1000) {
-      const full = await client
-        .from("articles")
-        .select("*")
-        .eq("type", "work")
-        .contains("related_actresses", [actressSlug])
-        .order("published_at", { ascending: false })
-        .limit(total);
-      if (!full.error && full.data) {
-        const normalized = (full.data ?? []).map((row) => normalizeArticle(row as Article));
-        const start = (safePage - 1) * safePerPage;
-        const end = start + safePerPage;
-        return {
-          items: normalized.slice(start, end),
-          total,
-        };
-      }
-    }
-    if (total < safePerPage * safePage) {
-      const rescue = await client
-        .from("articles")
-        .select("*")
-        .eq("type", "work")
-        .order("published_at", { ascending: false })
-        .limit(5000);
-      if (rescue.error) throw rescue.error;
-      const normalized = (rescue.data ?? []).map((row) => normalizeArticle(row as Article));
-      const filtered = normalized.filter((row) => row.related_actresses.includes(actressSlug));
-      const start = (safePage - 1) * safePerPage;
-      const end = start + safePerPage;
-      return {
-        items: filtered.slice(start, end),
-        total: filtered.length,
-      };
-    }
+  if (!primary.error && primary.data) {
+    const normalized = (primary.data ?? []).map((row) => normalizeArticle(row as Article));
+    const total = normalized.length;
     return {
-      items: (primary.data ?? []).map((row) => normalizeArticle(row as Article)),
+      items: normalized.slice(from, to + 1),
       total,
     };
   }
 
   const fallback = await client
     .from("articles")
-    .select("*", { count: "exact" })
+    .select("*")
     .eq("type", "work")
     .ilike("related_actresses_text", `%${actressSlug}%`)
     .order("published_at", { ascending: false })
-    .range(from, to);
+    .limit(5000);
   if (fallback.error) {
     throw fallback.error;
   }
-  if (!fallback.data || fallback.data.length === 0) {
-    const rescue = await client
-      .from("articles")
-      .select("*")
-      .eq("type", "work")
-      .order("published_at", { ascending: false })
-      .limit(5000);
-    if (rescue.error) throw rescue.error;
-    const normalized = (rescue.data ?? []).map((row) => normalizeArticle(row as Article));
-    const filtered = normalized.filter((row) => row.related_actresses.includes(actressSlug));
-    const start = (safePage - 1) * safePerPage;
-    const end = start + safePerPage;
-    return {
-      items: filtered.slice(start, end),
-      total: filtered.length,
-    };
-  }
+  const normalized = (fallback.data ?? []).map((row) => normalizeArticle(row as Article));
+  const total = normalized.length;
   return {
-    items: (fallback.data ?? []).map((row) => normalizeArticle(row as Article)),
-    total: fallback.count ?? 0,
+    items: normalized.slice(from, to + 1),
+    total,
   };
 }
 
