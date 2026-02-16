@@ -590,6 +590,24 @@ export async function getWorksByActressPage(
 
   if (!primary.error && primary.data && primary.data.length > 0) {
     const total = primary.count ?? 0;
+    if (total > 0 && total <= 1000) {
+      const full = await client
+        .from("articles")
+        .select("*")
+        .eq("type", "work")
+        .contains("related_actresses", [actressSlug])
+        .order("published_at", { ascending: false })
+        .limit(total);
+      if (!full.error && full.data) {
+        const normalized = (full.data ?? []).map((row) => normalizeArticle(row as Article));
+        const start = (safePage - 1) * safePerPage;
+        const end = start + safePerPage;
+        return {
+          items: normalized.slice(start, end),
+          total,
+        };
+      }
+    }
     if (total < safePerPage * safePage) {
       const rescue = await client
         .from("articles")
