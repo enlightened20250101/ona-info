@@ -374,6 +374,7 @@ export async function searchArticlesPage(options: {
   perPage?: number;
   type?: ArticleType;
   order?: SearchOrder;
+  beforeIso?: string;
 }) {
   const client = getSupabase();
   const safePage = Math.max(1, options.page ?? 1);
@@ -397,10 +398,15 @@ export async function searchArticlesPage(options: {
     if (!options.type) return builder;
     return builder.eq("type", options.type);
   };
+  const applyBefore = <T>(builder: T & { lte: Function }) => {
+    if (!options.beforeIso) return builder;
+    return builder.lte("published_at", options.beforeIso);
+  };
 
   if (!rawQuery) {
     let fallback = client.from("articles").select("*", { count: "exact" });
     fallback = applyType(fallback);
+    fallback = applyBefore(fallback);
     fallback = applyOrdering(fallback);
     const { data, error, count } = await fallback.range(from, to);
     if (error) throw error;
@@ -425,9 +431,35 @@ export async function searchArticlesPage(options: {
       ].join(",")
     );
   builder = applyType(builder);
+  builder = applyBefore(builder);
   builder = applyOrdering(builder);
 
   const { data, error, count } = await builder.range(from, to);
+  if (error) throw error;
+  return {
+    items: (data ?? []).map((row) => normalizeArticle(row as Article)),
+    total: count ?? 0,
+  };
+}
+
+export async function getLatestByTypePageBefore(
+  type: ArticleType,
+  beforeIso: string,
+  page = 1,
+  perPage = 20
+) {
+  const client = getSupabase();
+  const safePage = Math.max(1, page);
+  const safePerPage = Math.min(100, Math.max(1, perPage));
+  const from = (safePage - 1) * safePerPage;
+  const to = from + safePerPage - 1;
+  const { data, error, count } = await client
+    .from("articles")
+    .select("*", { count: "exact" })
+    .eq("type", type)
+    .lte("published_at", beforeIso)
+    .order("published_at", { ascending: false })
+    .range(from, to);
   if (error) throw error;
   return {
     items: (data ?? []).map((row) => normalizeArticle(row as Article)),
