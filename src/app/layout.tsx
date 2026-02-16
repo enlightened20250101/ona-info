@@ -87,7 +87,9 @@ export default function RootLayout({
         <GlobalTagBar />
         <GlobalTagSidebar />
         <div className="lg:pl-52">{children}</div>
-        <Footer />
+        <div className="lg:pl-52">
+          <Footer />
+        </div>
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger

@@ -4,7 +4,7 @@ import { FIXED_TAGS } from "@/lib/fixedTags";
 
 export default function GlobalTagSidebar() {
   return (
-    <aside className="fixed left-0 top-20 bottom-24 hidden w-52 border-r border-border bg-card/95 px-4 py-6 backdrop-blur lg:flex lg:flex-col">
+    <aside className="fixed left-0 top-0 hidden h-screen w-52 border-r border-border bg-card/95 px-4 py-6 backdrop-blur lg:flex lg:flex-col">
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted">
           Tags
