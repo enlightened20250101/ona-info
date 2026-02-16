@@ -605,6 +605,23 @@ export async function getWorksByActressPage(
   if (fallback.error) {
     throw fallback.error;
   }
+  if (!fallback.data || fallback.data.length === 0) {
+    const rescue = await client
+      .from("articles")
+      .select("*")
+      .eq("type", "work")
+      .order("published_at", { ascending: false })
+      .limit(5000);
+    if (rescue.error) throw rescue.error;
+    const normalized = (rescue.data ?? []).map((row) => normalizeArticle(row as Article));
+    const filtered = normalized.filter((row) => row.related_actresses.includes(actressSlug));
+    const start = (safePage - 1) * safePerPage;
+    const end = start + safePerPage;
+    return {
+      items: filtered.slice(start, end),
+      total: filtered.length,
+    };
+  }
   return {
     items: (fallback.data ?? []).map((row) => normalizeArticle(row as Article)),
     total: fallback.count ?? 0,
