@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SafeImage from "@/components/SafeImage";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import {
@@ -9,6 +10,7 @@ import {
 import { buildPagination } from "@/lib/pagination";
 import { extractMetaTagsFromBody } from "@/lib/tagging";
 import { SITE } from "@/lib/site";
+import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
@@ -180,14 +182,23 @@ export default async function ActressPage({
                   href={`/works/${work.slug}`}
                   className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent/40"
                 >
-                  {work.images?.[0]?.url ? (
-                    <img
-                      src={work.images[0].url}
-                      alt={work.images[0].alt}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
+                  {work.images?.[0]?.url &&
+                  !isLikelyInvalidImageUrl(work.images[0].url) ? (
+                    <div className="relative h-32 w-full">
+                      <SafeImage
+                        src={work.images[0].url}
+                        alt={work.images[0].alt}
+                        fill
+                        sizes="(min-width: 640px) 50vw, 100vw"
+                        unoptimized={shouldBypassNextImage(work.images[0].url)}
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                        fallback={
+                          <div className="absolute inset-0 flex items-center justify-center bg-accent-soft text-xs text-accent">
+                            No Image
+                          </div>
+                        }
+                      />
+                    </div>
                   ) : (
                     <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
                       No Image
@@ -271,14 +282,23 @@ export default async function ActressPage({
                   href={`/works/${work.slug}`}
                   className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
                 >
-                  {work.images?.[0]?.url ? (
-                    <img
-                      src={work.images[0].url}
-                      alt={work.images[0].alt}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
+                  {work.images?.[0]?.url &&
+                  !isLikelyInvalidImageUrl(work.images[0].url) ? (
+                    <div className="relative h-32 w-full">
+                      <SafeImage
+                        src={work.images[0].url}
+                        alt={work.images[0].alt}
+                        fill
+                        sizes="(min-width: 640px) 50vw, 100vw"
+                        unoptimized={shouldBypassNextImage(work.images[0].url)}
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                        fallback={
+                          <div className="absolute inset-0 flex items-center justify-center bg-accent-soft text-xs text-accent">
+                            No Image
+                          </div>
+                        }
+                      />
+                    </div>
                   ) : (
                     <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
                       No Image

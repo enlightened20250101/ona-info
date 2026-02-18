@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SafeImage from "@/components/SafeImage";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildTrend } from "@/lib/analytics";
@@ -6,6 +7,7 @@ import { extractTags, normalizeTag, tagLabel, tagSummary } from "@/lib/tagging";
 import { getLatestArticles, getLatestByType } from "@/lib/db";
 import { Article } from "@/lib/schema";
 import { SITE } from "@/lib/site";
+import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
@@ -263,14 +265,23 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
                   href={`/works/${work.slug}`}
                   className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
                 >
-                  {work.images?.[0]?.url ? (
-                    <img
-                      src={work.images[0].url}
-                      alt={work.images[0].alt}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
+                  {work.images?.[0]?.url &&
+                  !isLikelyInvalidImageUrl(work.images[0].url) ? (
+                    <div className="relative h-32 w-full">
+                      <SafeImage
+                        src={work.images[0].url}
+                        alt={work.images[0].alt}
+                        fill
+                        sizes="(min-width: 640px) 50vw, 100vw"
+                        unoptimized={shouldBypassNextImage(work.images[0].url)}
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                        fallback={
+                          <div className="absolute inset-0 flex items-center justify-center bg-accent-soft text-xs text-accent">
+                            No Image
+                          </div>
+                        }
+                      />
+                    </div>
                   ) : (
                     <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
                       No Image
@@ -353,13 +364,20 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
                   className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
                 >
                   <div className="relative h-28 overflow-hidden bg-accent-soft">
-                    {topic.images?.[0]?.url ? (
-                      <img
+                    {topic.images?.[0]?.url &&
+                    !isLikelyInvalidImageUrl(topic.images[0].url) ? (
+                      <SafeImage
                         src={topic.images[0].url}
                         alt={topic.images[0].alt}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                        fill
+                        sizes="(min-width: 640px) 50vw, 100vw"
+                        unoptimized={shouldBypassNextImage(topic.images[0].url)}
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                        fallback={
+                          <div className="absolute inset-0 flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
+                            Topic
+                          </div>
+                        }
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
@@ -390,13 +408,21 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
                   className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent/40"
                 >
                   <div className="relative h-28 overflow-hidden bg-accent-soft">
-                    {article.type === "work" && article.images?.[0]?.url ? (
-                      <img
+                    {article.type === "work" &&
+                    article.images?.[0]?.url &&
+                    !isLikelyInvalidImageUrl(article.images[0].url) ? (
+                      <SafeImage
                         src={article.images[0].url}
                         alt={article.title}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                        fill
+                        sizes="(min-width: 640px) 50vw, 100vw"
+                        unoptimized={shouldBypassNextImage(article.images[0].url)}
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                        fallback={
+                          <div className="absolute inset-0 flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
+                            {article.type}
+                          </div>
+                        }
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">

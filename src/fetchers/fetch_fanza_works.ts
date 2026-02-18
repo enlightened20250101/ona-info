@@ -159,12 +159,6 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
       const baseAws = `https://awsimgsrc.dmm.co.jp/pics_dig/digital/video/${normalizedContentId}/${normalizedContentId}`;
       const heavyThumb = `${baseAws}pl.jpg`;
       inferred.push(heavyThumb);
-      const hasJp = apiImages.some((url) => /jp-\d+\.jpg/i.test(url));
-      if (hasJp) {
-        for (let idx = 1; idx <= 9; idx += 1) {
-          inferred.push(`${baseAws}jp-${idx}.jpg`);
-        }
-      }
     }
 
     let primary =
@@ -174,7 +168,9 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
       apiOther[0] ||
       apiImages[0] ||
       "";
-    const extraSources = inferred.slice(1);
+    const extraSources = [...apiLarge, ...apiSample, ...apiOther].filter(
+      (url) => url && url !== primary
+    ) as string[];
     const uniqueImages = Array.from(new Set([primary, ...extraSources])).filter(
       (url) => url && !nowPrintingPattern.test(String(url))
     ) as string[];

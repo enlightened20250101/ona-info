@@ -92,7 +92,7 @@ async function fetchRanking(period: RankingWindow, limit: number) {
         },
       },
       orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
-      limit,
+      limit: String(limit),
     },
   });
 

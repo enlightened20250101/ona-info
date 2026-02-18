@@ -10,12 +10,35 @@ type EmbedInfo = {
   iframeSrc?: string;
 };
 
+const ALLOWED_EMBED_HOSTS = new Set([
+  "www.dmm.co.jp",
+  "dmm.co.jp",
+  "www.dmm.com",
+  "pics.dmm.co.jp",
+  "awsimgsrc.dmm.co.jp",
+  "r18.com",
+  "www.r18.com",
+  "static.mgstage.com",
+  "www.mgstage.com",
+]);
+
+function isAllowedUrl(value: string | undefined | null) {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return ALLOWED_EMBED_HOSTS.has(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function parseMgsEmbed(html: string): EmbedInfo | null {
   if (!html) return null;
   const scriptMatch = html.match(
     /<script[^>]+src="([^"]*(mgs_Widget_affiliate\.js|mgs_sample_movie\.js)[^"]*)"/i
   );
   if (!scriptMatch) return null;
+  if (!isAllowedUrl(scriptMatch[1])) return null;
   const classMatch = html.match(/<div\s+class="([^"]+)"/i);
   const idMatch = html.match(/<script[^>]+id="([^"]+)"/i);
   return {
@@ -30,6 +53,7 @@ function parseIframeEmbed(html: string): EmbedInfo | null {
   if (!html) return null;
   const iframeMatch = html.match(/<iframe[^>]+src="([^"]+)"/i);
   if (!iframeMatch) return null;
+  if (!isAllowedUrl(iframeMatch[1])) return null;
   return {
     kind: "iframe",
     iframeSrc: iframeMatch[1],
@@ -147,6 +171,9 @@ export function AffiliateEmbed({
               scrolling="no"
               frameBorder={0}
               allowFullScreen
+              sandbox="allow-scripts allow-same-origin"
+              referrerPolicy="no-referrer"
+              allow="autoplay; fullscreen; picture-in-picture"
               onError={() => setIframeFailed(true)}
               onLoad={() => setIframeFailed(false)}
             />

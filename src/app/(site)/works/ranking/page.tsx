@@ -1,8 +1,10 @@
 import Link from "next/link";
+import SafeImage from "@/components/SafeImage";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { getLatestByType } from "@/lib/db";
 import { SITE } from "@/lib/site";
+import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
@@ -54,11 +56,20 @@ export default async function WorksRankingPage() {
                 className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
               >
                 <div className="relative h-32 overflow-hidden bg-accent-soft">
-                  {topic.images?.[0]?.url ? (
-                    <img
+                  {topic.images?.[0]?.url &&
+                  !isLikelyInvalidImageUrl(topic.images[0].url) ? (
+                    <SafeImage
                       src={topic.images[0].url}
                       alt={topic.title}
-                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                      fill
+                      sizes="(min-width: 640px) 50vw, 100vw"
+                      unoptimized={shouldBypassNextImage(topic.images[0].url)}
+                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      fallback={
+                        <div className="absolute inset-0 flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
+                          Ranking
+                        </div>
+                      }
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">

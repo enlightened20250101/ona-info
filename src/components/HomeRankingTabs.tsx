@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import SafeImage from "@/components/SafeImage";
 import { useMemo, useState } from "react";
+import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 type RankingItem = {
   id: string;
@@ -60,13 +62,20 @@ export default function HomeRankingTabs({
             className="group flex gap-3 rounded-2xl border border-border bg-white p-2 hover:border-accent/40"
           >
             <div className="relative h-16 w-24 overflow-hidden rounded-lg bg-accent-soft">
-              {work.images[0]?.url ? (
-                <img
+              {work.images[0]?.url &&
+              !isLikelyInvalidImageUrl(work.images[0].url) ? (
+                <SafeImage
                   src={work.images[0].url}
                   alt={work.images[0]?.alt ?? work.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                  fill
+                  sizes="96px"
+                  unoptimized={shouldBypassNextImage(work.images[0].url)}
+                  className="object-cover transition duration-500 group-hover:scale-[1.04]"
+                  fallback={
+                    <div className="absolute inset-0 flex h-full items-center justify-center text-[10px] text-accent">
+                      No Image
+                    </div>
+                  }
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-[10px] text-accent">

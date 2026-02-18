@@ -1,10 +1,12 @@
 import Link from "next/link";
+import SafeImage from "@/components/SafeImage";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
 import { getActressCovers, getActressStats, getLatestByType } from "@/lib/db";
 import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
 import { SITE } from "@/lib/site";
+import { shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
@@ -171,10 +173,18 @@ export default async function ActressesPage({
                   >
                     <div className="relative h-36 overflow-hidden bg-accent-soft">
                       {cover ? (
-                        <img
+                        <SafeImage
                           src={cover}
                           alt={slug}
-                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                          fill
+                          sizes="(min-width: 640px) 50vw, 100vw"
+                          unoptimized={shouldBypassNextImage(cover)}
+                          className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                          fallback={
+                            <div className="absolute inset-0 flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
+                              Actress
+                            </div>
+                          }
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">

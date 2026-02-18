@@ -1,5 +1,5 @@
 import { SITE } from "@/lib/site";
-import { getLatestArticles } from "@/lib/db";
+import { getLatestArticlesLite } from "@/lib/db";
 import { extractTags, tagLabel } from "@/lib/tagging";
 
 function escapeXml(value: string) {
@@ -17,7 +17,7 @@ function buildItemUrl(type: string, slug: string) {
 }
 
 export async function GET() {
-  const items = await getLatestArticles(200);
+  const items = await getLatestArticlesLite(200);
   const now = new Date().toISOString();
 
   const xmlItems = items

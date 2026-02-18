@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SafeImage from "@/components/SafeImage";
 import { Metadata } from "next";
 import { Suspense } from "react";
 import Breadcrumbs from "@/components/Breadcrumbs";
@@ -8,12 +9,14 @@ import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers
 import {
   findWorksByActressSlug,
   getArticleBySlug,
-  getLatestByTypePage,
-  getLatestByTypePageBefore,
-  getWorksByGenre,
+  getLatestByTypePageLite,
+  getLatestByTypePageBeforeLite,
+  getWorksByGenreLite,
 } from "@/lib/db";
 import { SITE } from "@/lib/site";
 import { Article } from "@/lib/schema";
+import { getJstNow, parsePublishedAt } from "@/lib/releaseDate";
+import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
@@ -31,14 +34,10 @@ function formatDate(iso: string) {
   });
 }
 
-function getJstNow() {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-}
-
 function isReleased(iso: string, now: Date) {
   if (!iso) return true;
-  const parsed = new Date(iso);
-  if (Number.isNaN(parsed.getTime())) return true;
+  const parsed = parsePublishedAt(iso);
+  if (!parsed) return true;
   return parsed.getTime() <= now.getTime();
 }
 
@@ -268,14 +267,18 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
             fallbackLabel="FANZAで見る"
             forceFallback={article.images.length === 0}
           />
-        ) : article.affiliate_url && article.images[0]?.url ? (
+        ) : article.affiliate_url &&
+        article.images[0]?.url &&
+        !isLikelyInvalidImageUrl(article.images[0].url) ? (
           <a href={article.affiliate_url} rel="sponsored noopener noreferrer" target="_blank">
-            <img
+            <SafeImage
               src={article.images[0].url}
               alt={article.title}
-              className="mt-4 w-full rounded-2xl"
-              loading="lazy"
-              decoding="async"
+              width={1280}
+              height={720}
+              sizes="100vw"
+              unoptimized={shouldBypassNextImage(article.images[0].url)}
+              className="mt-4 h-auto w-full rounded-2xl"
             />
           </a>
         ) : null}
@@ -284,16 +287,25 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
           <div className="rounded-3xl border border-border bg-white p-6">
             <div className="grid gap-3">
               {article.images.length > 0 ? (
-                article.images.map((image) => (
-                  <img
-                    key={image.url}
-                    src={image.url}
-                    alt={image.alt}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-48 w-full rounded-2xl object-cover"
-                  />
-                ))
+                article.images
+                  .filter((image) => !isLikelyInvalidImageUrl(image.url))
+                  .map((image) => (
+                    <div key={image.url} className="relative h-48 w-full">
+                      <SafeImage
+                        src={image.url}
+                        alt={image.alt}
+                        fill
+                        sizes="(min-width: 768px) 50vw, 100vw"
+                        unoptimized={shouldBypassNextImage(image.url)}
+                        className="rounded-2xl object-cover"
+                        fallback={
+                          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-accent-soft text-xs text-accent">
+                            No Image
+                          </div>
+                        }
+                      />
+                    </div>
+                  ))
               ) : (
                 <div className="flex h-48 items-center justify-center rounded-2xl bg-accent-soft text-xs text-accent">
                   No Image
@@ -481,34 +493,42 @@ async function RelatedSections({
 }) {
   const base = SITE.url.replace(/\/$/, "");
   const now = getJstNow();
+  const fallbackCover = article.images?.[0]?.url ?? null;
+  const sameGenre = article.meta_genres?.[0] ?? null;
+  const [relatedByActress, latestTopicsResult, latestWorksResult, sameGenreResult] =
+    await Promise.all([
+      leadActress ? findWorksByActressSlug(leadActress, 12) : Promise.resolve([]),
+      getLatestByTypePageLite("topic", 1, 40),
+      getLatestByTypePageBeforeLite("work", now.toISOString(), 1, 120),
+      sameGenre ? getWorksByGenreLite(sameGenre, 18) : Promise.resolve([]),
+    ]);
+
   const related = leadActress
     ? pickDailyRandom(
-        (await findWorksByActressSlug(leadActress, 12))
+        relatedByActress
           .filter((work) => work.slug !== article.slug)
           .filter((work) => isReleased(work.published_at, now)),
         8,
         `actress-${article.slug}`
       )
     : [];
-  const fallbackCover = article.images?.[0]?.url ?? null;
-  const latestTopics = (await getLatestByTypePage("topic", 1, 40)).items;
+  const latestTopics = latestTopicsResult.items;
   const relatedTopics = latestTopics
     .filter((topic) => {
       const topicTags = extractTags(`${topic.title} ${topic.summary}`);
       return topicTags.some((tag) => baseTags.includes(tag));
     })
     .slice(0, 4);
-  const latestWorks = (await getLatestByTypePageBefore("work", now.toISOString(), 1, 120)).items;
+  const latestWorks = latestWorksResult.items;
   const recentWorks = pickDailyRandom(
     latestWorks.filter((work) => work.slug !== article.slug),
     12,
     `recent-${article.slug}`
   );
   const actressCoverPool = buildActressCoverPool(latestWorks);
-  const sameGenre = article.meta_genres?.[0] ?? null;
   const sameGenreWorks = sameGenre
     ? pickDailyRandom(
-        (await getWorksByGenre(sameGenre, 18))
+        sameGenreResult
           .filter((work) => work.slug !== article.slug)
           .filter((work) => isReleased(work.published_at, now)),
         6,
@@ -593,12 +613,18 @@ async function RelatedSections({
                 >
                   <div className="relative h-28 overflow-hidden bg-accent-soft">
                     {cover ? (
-                      <img
+                      <SafeImage
                         src={cover}
                         alt={slug}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                        fill
+                        sizes="(min-width: 640px) 50vw, 100vw"
+                        unoptimized={shouldBypassNextImage(cover)}
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                        fallback={
+                          <div className="absolute inset-0 flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
+                            Actress
+                          </div>
+                        }
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">
@@ -626,14 +652,23 @@ async function RelatedSections({
                 href={`/works/${work.slug}`}
                 className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
               >
-                {work.images?.[0]?.url ? (
-                  <img
-                    src={work.images[0].url}
-                    alt={work.images[0].alt}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                  />
+                {work.images?.[0]?.url &&
+                !isLikelyInvalidImageUrl(work.images[0].url) ? (
+                  <div className="relative h-32 w-full">
+                    <SafeImage
+                      src={work.images[0].url}
+                      alt={work.images[0].alt}
+                      fill
+                      sizes="(min-width: 640px) 50vw, 100vw"
+                      unoptimized={shouldBypassNextImage(work.images[0].url)}
+                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      fallback={
+                        <div className="absolute inset-0 flex items-center justify-center bg-accent-soft text-xs text-accent">
+                          No Image
+                        </div>
+                      }
+                    />
+                  </div>
                 ) : (
                   <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
                     No Image
@@ -659,14 +694,23 @@ async function RelatedSections({
                 href={`/works/${work.slug}`}
                 className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
               >
-                {work.images?.[0]?.url ? (
-                  <img
-                    src={work.images[0].url}
-                    alt={work.images[0].alt}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                  />
+                {work.images?.[0]?.url &&
+                !isLikelyInvalidImageUrl(work.images[0].url) ? (
+                  <div className="relative h-32 w-full">
+                    <SafeImage
+                      src={work.images[0].url}
+                      alt={work.images[0].alt}
+                      fill
+                      sizes="(min-width: 640px) 50vw, 100vw"
+                      unoptimized={shouldBypassNextImage(work.images[0].url)}
+                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      fallback={
+                        <div className="absolute inset-0 flex items-center justify-center bg-accent-soft text-xs text-accent">
+                          No Image
+                        </div>
+                      }
+                    />
+                  </div>
                 ) : (
                   <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
                     No Image
@@ -692,14 +736,23 @@ async function RelatedSections({
                 href={`/works/${work.slug}`}
                 className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
               >
-                {work.images?.[0]?.url ? (
-                  <img
-                    src={work.images[0].url}
-                    alt={work.images[0].alt}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                  />
+                {work.images?.[0]?.url &&
+                !isLikelyInvalidImageUrl(work.images[0].url) ? (
+                  <div className="relative h-32 w-full">
+                    <SafeImage
+                      src={work.images[0].url}
+                      alt={work.images[0].alt}
+                      fill
+                      sizes="(min-width: 640px) 50vw, 100vw"
+                      unoptimized={shouldBypassNextImage(work.images[0].url)}
+                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      fallback={
+                        <div className="absolute inset-0 flex items-center justify-center bg-accent-soft text-xs text-accent">
+                          No Image
+                        </div>
+                      }
+                    />
+                  </div>
                 ) : (
                   <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
                     No Image
@@ -754,14 +807,23 @@ async function RelatedSections({
                 href={`/works/${work.slug}`}
                 className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
               >
-                {work.images?.[0]?.url ? (
-                  <img
-                    src={work.images[0].url}
-                    alt={work.images[0].alt}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-28 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                  />
+                {work.images?.[0]?.url &&
+                !isLikelyInvalidImageUrl(work.images[0].url) ? (
+                  <div className="relative h-28 w-full">
+                    <SafeImage
+                      src={work.images[0].url}
+                      alt={work.images[0].alt}
+                      fill
+                      sizes="(min-width: 640px) 50vw, 100vw"
+                      unoptimized={shouldBypassNextImage(work.images[0].url)}
+                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      fallback={
+                        <div className="absolute inset-0 flex items-center justify-center bg-accent-soft text-xs text-accent">
+                          No Image
+                        </div>
+                      }
+                    />
+                  </div>
                 ) : (
                   <div className="flex h-28 items-center justify-center bg-accent-soft text-xs text-accent">
                     No Image

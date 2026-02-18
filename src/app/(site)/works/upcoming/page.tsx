@@ -1,13 +1,12 @@
 import Link from "next/link";
+import SafeImage from "@/components/SafeImage";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
-import { getLatestByTypePageAfter } from "@/lib/db";
+import { getLatestByTypePageAfterLite } from "@/lib/db";
 import { SITE } from "@/lib/site";
-
-function getJstNow() {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-}
+import { getJstNow } from "@/lib/releaseDate";
+import { shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +32,7 @@ export default async function UpcomingWorksPage({
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
   const perPage = 20;
   const now = getJstNow();
-  const result = await getLatestByTypePageAfter("work", now.toISOString(), page, perPage);
+  const result = await getLatestByTypePageAfterLite("work", now.toISOString(), page, perPage);
   const totalPages = Math.max(1, Math.ceil(result.total / perPage));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * perPage;
@@ -67,11 +66,21 @@ export default async function UpcomingWorksPage({
               className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
             >
               {work.images?.[0]?.url ? (
-                <img
-                  src={work.images[0].url}
-                  alt={work.images[0].alt}
-                  className="h-40 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                />
+                <div className="relative h-40 w-full">
+                  <SafeImage
+                    src={work.images[0].url}
+                    alt={work.images[0].alt}
+                    fill
+                    sizes="(min-width: 640px) 50vw, 100vw"
+                    unoptimized={shouldBypassNextImage(work.images[0].url)}
+                    className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                    fallback={
+                      <div className="absolute inset-0 flex items-center justify-center bg-accent-soft text-xs text-accent">
+                        No Image
+                      </div>
+                    }
+                  />
+                </div>
               ) : (
                 <div className="flex h-40 items-center justify-center bg-accent-soft text-xs text-accent">
                   No Image
