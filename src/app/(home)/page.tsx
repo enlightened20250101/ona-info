@@ -1,16 +1,25 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Metadata } from "next";
 import {
   getActressRanking,
   getActressCovers,
-  getLatestArticles,
-  getLatestByType,
-  getLatestByTypeBefore,
+  getLatestArticlesLite,
+  getLatestByTypeBeforeLite,
+  getLatestByTypeLite,
+  getArticlesBySlugs,
+  getWorkRankingSlugs,
 } from "@/lib/db";
 import { buildPagination } from "@/lib/pagination";
 import HomeRankingTabs from "@/components/HomeRankingTabs";
 import { SITE } from "@/lib/site";
 import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
+import {
+  getJstNow,
+  parsePublishedAt,
+  isAvailableWork,
+  isUpcomingWork,
+} from "@/lib/releaseDate";
 
 export const dynamic = "force-dynamic";
 
@@ -52,60 +61,6 @@ function pickDailyRandom<T>(items: T[], count: number) {
   return shuffled.slice(0, count);
 }
 
-function getJstNow() {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-}
-
-function parsePublishedAt(iso: string) {
-  if (!iso) return null;
-  const trimmed = iso.trim();
-  const dateOnly = /^\d{4}[-/]\d{2}[-/]\d{2}$/;
-  const dateTimeNoTz = /^\d{4}[-/]\d{2}[-/]\d{2}[ T]\d{2}:\d{2}:\d{2}$/;
-  if (dateOnly.test(trimmed)) {
-    const normalized = trimmed.replace(/\//g, "-");
-    return new Date(`${normalized}T00:00:00+09:00`);
-  }
-  if (dateTimeNoTz.test(trimmed)) {
-    const normalized = trimmed.replace(/\//g, "-").replace(" ", "T");
-    return new Date(`${normalized}+09:00`);
-  }
-  let normalized = trimmed.replace(/\//g, "-").replace(" ", "T");
-  normalized = normalized.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
-  normalized = normalized.replace(/([+-]\d{2})$/, "$1:00");
-  normalized = normalized.replace(/\+00:00$/, "Z");
-  normalized = normalized.replace(/\+0000$/, "Z");
-  normalized = normalized.replace(/\+00$/, "Z");
-  const parsed = new Date(normalized);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function isUpcoming(iso: string, now: Date) {
-  const parsed = parsePublishedAt(iso);
-  if (!parsed) return false;
-  return parsed.getTime() > now.getTime();
-}
-
-function isAvailable(iso: string, now: Date) {
-  const parsed = parsePublishedAt(iso);
-  if (!parsed) return true;
-  return parsed.getTime() <= now.getTime();
-}
-
-function isUpcomingWork(work: { published_at: string }, now: Date) {
-  return isUpcoming(work.published_at, now);
-}
-
-function isAvailableWork(work: { published_at: string }, now: Date) {
-  return isAvailable(work.published_at, now);
-}
-
-function isAvailableByPublishedAt(
-  work: { published_at: string },
-  now: Date
-) {
-  return isAvailable(work.published_at, now);
-}
-
 function pickRanked<T extends { slug: string; images: { url: string }[] }>(
   items: T[],
   count: number,
@@ -136,7 +91,14 @@ export default async function Home({
   searchParams: Promise<{ page?: string }>;
 }) {
   const sp = await searchParams;
-  const latest = await getLatestArticles(100);
+  const now = getJstNow();
+  const nowIso = now.toISOString();
+  const [latest, latestWorks, availableWorks, topActresses] = await Promise.all([
+    getLatestArticlesLite(100),
+    getLatestByTypeLite("work", 600, { includeBody: true }),
+    getLatestByTypeBeforeLite("work", nowIso, 600, { includeBody: true }),
+    getActressRanking(8),
+  ]);
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
   const perPage = 12;
   const totalPages = Math.max(1, Math.ceil(latest.length / perPage));
@@ -145,12 +107,6 @@ export default async function Home({
   const latestPage = latest.slice(start, start + perPage);
   const pagination = buildPagination(safePage, totalPages);
 
-  const now = getJstNow();
-  const nowIso = now.toISOString();
-  const latestWorks = await getLatestByType("work", 600);
-  const availableWorks = await getLatestByTypeBefore("work", nowIso, 600);
-
-  const topActresses = await getActressRanking(8);
   const actressSlugs = topActresses.map((row) => row.actress);
   const actressCoverMap = await getActressCovers(actressSlugs);
   const actressCoverPool = buildActressCoverPool(latestWorks);
@@ -194,9 +150,38 @@ export default async function Home({
     return published ? published.getTime() >= now.getTime() - 30 * 24 * 60 * 60 * 1000 : false;
   });
   const usedRanking = new Set<string>();
-  const dailyRanking = pickRanked(dailyPool, 8, "daily", usedRanking);
-  const weeklyRanking = pickRanked(weeklyPool, 8, "weekly", usedRanking);
-  const monthlyRanking = pickRanked(monthlyPool, 8, "monthly", usedRanking);
+  const [dailyRankSlugs, weeklyRankSlugs, monthlyRankSlugs] = await Promise.all([
+    getWorkRankingSlugs("daily", 20),
+    getWorkRankingSlugs("weekly", 20),
+    getWorkRankingSlugs("monthly", 20),
+  ]);
+
+  const hydrateRanking = async (slugs: { slug: string }[]) => {
+    const list = slugs.map((item) => item.slug);
+    if (list.length === 0) return [];
+    const articles = await getArticlesBySlugs("work", list);
+    const map = new Map(articles.map((article) => [article.slug, article]));
+    return list.map((slug) => map.get(slug)).filter(Boolean) as typeof articles;
+  };
+
+  const [dailyRankWorks, weeklyRankWorks, monthlyRankWorks] = await Promise.all([
+    hydrateRanking(dailyRankSlugs),
+    hydrateRanking(weeklyRankSlugs),
+    hydrateRanking(monthlyRankSlugs),
+  ]);
+
+  const dailyRanking =
+    dailyRankWorks.length > 0
+      ? dailyRankWorks.slice(0, 8)
+      : pickRanked(dailyPool, 8, "daily", usedRanking);
+  const weeklyRanking =
+    weeklyRankWorks.length > 0
+      ? weeklyRankWorks.slice(0, 8)
+      : pickRanked(weeklyPool, 8, "weekly", usedRanking);
+  const monthlyRanking =
+    monthlyRankWorks.length > 0
+      ? monthlyRankWorks.slice(0, 8)
+      : pickRanked(monthlyPool, 8, "monthly", usedRanking);
   const visualWorks = availableWorks.slice(0, 12);
   const filteredLatest = latestPage.filter((article) =>
     article.type !== "work" ? true : isAvailableWork(article, now)
@@ -259,11 +244,16 @@ export default async function Home({
                   index === 0 ? "col-span-2 row-span-2" : ""
                 } ${index === 1 ? "luxe-delay-1" : index === 2 ? "luxe-delay-2" : index === 3 ? "luxe-delay-3" : index === 4 ? "luxe-delay-4" : index === 5 ? "luxe-delay-5" : index === 6 ? "luxe-delay-6" : index === 7 ? "luxe-delay-7" : ""}`}
               >
-                <img
+                <Image
                   src={work.images[0]?.url ?? ""}
                   alt={work.images[0]?.alt ?? work.title}
-                  loading={index < 2 ? "eager" : "lazy"}
-                  decoding="async"
+                  fill
+                  sizes={
+                    index === 0
+                      ? "(min-width: 1024px) 48vw, 100vw"
+                      : "(min-width: 1024px) 16vw, 33vw"
+                  }
+                  priority={index === 0}
                   className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent opacity-90" />
@@ -299,11 +289,11 @@ export default async function Home({
                   >
                     <div className="relative aspect-[4/3] w-full">
                       {work.images[0]?.url ? (
-                        <img
+                        <Image
                           src={work.images[0].url}
                           alt={work.images[0].alt}
-                          loading="lazy"
-                          decoding="async"
+                          fill
+                          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                           className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                         />
                       ) : (
@@ -363,11 +353,11 @@ export default async function Home({
                     >
                       <div className="relative h-24 overflow-hidden bg-accent-soft">
                         {actress.image ? (
-                          <img
+                          <Image
                             src={actress.image}
                             alt={actress.slug}
-                            loading="lazy"
-                            decoding="async"
+                            fill
+                            sizes="(min-width: 1024px) 20vw, (min-width: 640px) 50vw, 100vw"
                             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                           />
                         ) : (
@@ -404,11 +394,11 @@ export default async function Home({
                   >
                     <div className="relative aspect-[4/3] w-full">
                       {work.images[0]?.url ? (
-                        <img
+                        <Image
                           src={work.images[0].url}
                           alt={work.images[0].alt}
-                          loading="lazy"
-                          decoding="async"
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
                           className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                         />
                       ) : (
@@ -450,13 +440,13 @@ export default async function Home({
                     >
                       <div className="relative aspect-[4/3] w-full">
                         {work.images[0]?.url ? (
-                          <img
-                            src={work.images[0].url}
-                            alt={work.images[0].alt}
-                            loading="lazy"
-                            decoding="async"
-                            className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                          />
+                        <Image
+                          src={work.images[0].url}
+                          alt={work.images[0].alt}
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                        />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center bg-accent-soft text-xs text-accent">
                             No Image
@@ -495,13 +485,15 @@ export default async function Home({
                       className="group relative overflow-hidden rounded-2xl border border-border bg-white"
                     >
                       {cover ? (
-                        <img
-                          src={cover}
-                          alt={article.title}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-32 w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                        />
+                        <div className="relative h-32 w-full">
+                          <Image
+                            src={cover}
+                            alt={article.title}
+                            fill
+                            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                            className="object-cover transition duration-500 group-hover:scale-[1.04]"
+                          />
+                        </div>
                       ) : (
                         <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
                           {article.type.toUpperCase()}

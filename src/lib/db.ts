@@ -66,6 +66,27 @@ type Database = {
         };
         Relationships: [];
       };
+      work_rankings: {
+        Row: {
+          period: string;
+          slug: string;
+          views: number;
+          updated_at: string;
+        };
+        Insert: {
+          period: string;
+          slug: string;
+          views: number;
+          updated_at?: string;
+        };
+        Update: {
+          period?: string;
+          slug?: string;
+          views?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       actress_stats: {
@@ -177,6 +198,36 @@ function normalizeArticle(row: Article): Article {
   };
 }
 
+const LIST_FIELDS =
+  "id,type,slug,title,summary,images,related_actresses,meta_genres,meta_makers,published_at,fetched_at";
+const LIST_FIELDS_WITH_BODY = `${LIST_FIELDS},body`;
+const SITEMAP_FIELDS = "type,slug,published_at";
+
+function normalizeArticleLite(row: Partial<Article>): Article {
+  const images = parseArray<{ url: string; alt: string }>(row.images).map((img) => ({
+    ...img,
+    url: optimizeImageUrl(img.url),
+  }));
+  return {
+    id: row.id ?? "",
+    type: (row.type as ArticleType) ?? "work",
+    slug: row.slug ?? "",
+    title: row.title ?? "",
+    summary: row.summary ?? "",
+    body: row.body ?? "",
+    images,
+    source_url: row.source_url ?? "",
+    affiliate_url: row.affiliate_url ?? null,
+    embed_html: row.embed_html ?? null,
+    meta_genres: parseArray(row.meta_genres),
+    meta_makers: parseArray(row.meta_makers),
+    related_works: parseArray(row.related_works),
+    related_actresses: parseArray(row.related_actresses),
+    published_at: row.published_at ?? "",
+    fetched_at: row.fetched_at ?? "",
+  };
+}
+
 function isUniqueViolation(error?: PostgrestError | null) {
   return error?.code === "23505";
 }
@@ -243,6 +294,41 @@ export async function getLatestArticles(limit = 30) {
   return (data ?? []).map((row) => normalizeArticle(row as Article));
 }
 
+export async function getLatestArticlesLite(limit = 30) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("articles")
+    .select(LIST_FIELDS)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>));
+}
+
+export async function getLatestArticlesForSitemap(limit = 5000) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("articles")
+    .select(SITEMAP_FIELDS)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as { type: ArticleType; slug: string; published_at: string }[];
+}
+
+export async function getArticlesCount() {
+  const client = getSupabase();
+  const { count, error } = await client
+    .from("articles")
+    .select("id", { count: "exact", head: true });
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function getLatestByType(type: ArticleType, limit = 10) {
   const client = getSupabase();
   const { data, error } = await client
@@ -257,6 +343,27 @@ export async function getLatestByType(type: ArticleType, limit = 10) {
   }
 
   return (data ?? []).map((row) => normalizeArticle(row as Article));
+}
+
+export async function getLatestByTypeLite(
+  type: ArticleType,
+  limit = 10,
+  options: { includeBody?: boolean } = {}
+) {
+  const client = getSupabase();
+  const selectFields = options.includeBody ? LIST_FIELDS_WITH_BODY : LIST_FIELDS;
+  const { data, error } = await client
+    .from("articles")
+    .select(selectFields)
+    .eq("type", type)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>));
 }
 
 export async function getLatestByTypeBefore(
@@ -278,6 +385,29 @@ export async function getLatestByTypeBefore(
   }
 
   return (data ?? []).map((row) => normalizeArticle(row as Article));
+}
+
+export async function getLatestByTypeBeforeLite(
+  type: ArticleType,
+  beforeIso: string,
+  limit = 10,
+  options: { includeBody?: boolean } = {}
+) {
+  const client = getSupabase();
+  const selectFields = options.includeBody ? LIST_FIELDS_WITH_BODY : LIST_FIELDS;
+  const { data, error } = await client
+    .from("articles")
+    .select(selectFields)
+    .eq("type", type)
+    .lte("published_at", beforeIso)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>));
 }
 
 export async function getLatestByTypePage(
@@ -303,6 +433,31 @@ export async function getLatestByTypePage(
   };
 }
 
+export async function getLatestByTypePageLite(
+  type: ArticleType,
+  page = 1,
+  perPage = 20,
+  options: { includeBody?: boolean } = {}
+) {
+  const client = getSupabase();
+  const safePage = Math.max(1, page);
+  const safePerPage = Math.min(100, Math.max(1, perPage));
+  const from = (safePage - 1) * safePerPage;
+  const to = from + safePerPage - 1;
+  const selectFields = options.includeBody ? LIST_FIELDS_WITH_BODY : LIST_FIELDS;
+  const { data, error, count } = await client
+    .from("articles")
+    .select(selectFields, { count: "exact" })
+    .eq("type", type)
+    .order("published_at", { ascending: false })
+    .range(from, to);
+  if (error) throw error;
+  return {
+    items: (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>)),
+    total: count ?? 0,
+  };
+}
+
 export async function getWorksByGenre(genre: string, limit = 12) {
   const client = getSupabase();
   try {
@@ -320,6 +475,22 @@ export async function getWorksByGenre(genre: string, limit = 12) {
   }
 }
 
+export async function getWorksByGenreLite(genre: string, limit = 12) {
+  const client = getSupabase();
+  try {
+    const { data, error } = await client
+      .from("articles")
+      .select(LIST_FIELDS)
+      .eq("type", "work")
+      .contains("meta_genres", [genre])
+      .order("published_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>));
+  } catch {
+    return [];
+  }
+}
 export async function getWorksByMetaTagPage(
   tag: string,
   page = 1,
@@ -350,6 +521,40 @@ export async function getWorksByMetaTagPage(
   if (error) throw error;
   return {
     items: (data ?? []).map((row) => normalizeArticle(row as Article)),
+    total: count ?? 0,
+  };
+}
+
+export async function getWorksByMetaTagPageLite(
+  tag: string,
+  page = 1,
+  perPage = 20
+) {
+  const client = getSupabase();
+  const safePage = Math.max(1, page);
+  const safePerPage = Math.min(100, Math.max(1, perPage));
+  const from = (safePage - 1) * safePerPage;
+  const to = from + safePerPage - 1;
+
+  let builder = client
+    .from("articles")
+    .select(LIST_FIELDS, { count: "exact" })
+    .eq("type", "work");
+
+  if (tag.startsWith("genre:")) {
+    const value = tag.replace("genre:", "");
+    builder = builder.contains("meta_genres", [value]);
+  } else if (tag.startsWith("maker:")) {
+    const value = tag.replace("maker:", "");
+    builder = builder.contains("meta_makers", [value]);
+  }
+
+  const { data, error, count } = await builder
+    .order("published_at", { ascending: false })
+    .range(from, to);
+  if (error) throw error;
+  return {
+    items: (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>)),
     total: count ?? 0,
   };
 }
@@ -442,6 +647,80 @@ export async function searchArticlesPage(options: {
   };
 }
 
+export async function searchArticlesPageLite(options: {
+  query: string;
+  page?: number;
+  perPage?: number;
+  type?: ArticleType;
+  order?: SearchOrder;
+  beforeIso?: string;
+}) {
+  const client = getSupabase();
+  const safePage = Math.max(1, options.page ?? 1);
+  const safePerPage = Math.min(100, Math.max(1, options.perPage ?? 20));
+  const from = (safePage - 1) * safePerPage;
+  const to = from + safePerPage - 1;
+  const rawQuery = options.query.trim();
+  const query = rawQuery.replace(/%/g, "\\%").replace(/_/g, "\\_");
+
+  const applyOrdering = <T>(builder: T & { order: Function }) => {
+    if (options.order === "oldest") {
+      return builder.order("published_at", { ascending: true });
+    }
+    if (options.order === "title") {
+      return builder.order("title", { ascending: true });
+    }
+    return builder.order("published_at", { ascending: false });
+  };
+
+  const applyType = <T>(builder: T & { eq: Function }) => {
+    if (!options.type) return builder;
+    return builder.eq("type", options.type);
+  };
+  const applyBefore = <T>(builder: T & { lte: Function }) => {
+    if (!options.beforeIso) return builder;
+    return builder.lte("published_at", options.beforeIso);
+  };
+
+  if (!rawQuery) {
+    let fallback = client.from("articles").select(LIST_FIELDS, { count: "exact" });
+    fallback = applyType(fallback);
+    fallback = applyBefore(fallback);
+    fallback = applyOrdering(fallback);
+    const { data, error, count } = await fallback.range(from, to);
+    if (error) throw error;
+    return {
+      items: (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>)),
+      total: count ?? 0,
+    };
+  }
+
+  const likeQuery = `%${query}%`;
+  let builder = client
+    .from("articles")
+    .select(LIST_FIELDS, { count: "exact" })
+    .or(
+      [
+        `search_tsv.wfts.${rawQuery}`,
+        `title.ilike.${likeQuery}`,
+        `summary.ilike.${likeQuery}`,
+        `body.ilike.${likeQuery}`,
+        `slug.ilike.${likeQuery}`,
+        `related_actresses_text.ilike.${likeQuery}`,
+      ].join(",")
+    );
+  builder = applyType(builder);
+  builder = applyBefore(builder);
+  builder = applyOrdering(builder);
+
+  const { data, error, count } = await builder.range(from, to);
+  if (error) throw error;
+  return {
+    items: (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>)),
+    total: count ?? 0,
+  };
+}
+
 export async function getLatestByTypePageBefore(
   type: ArticleType,
   beforeIso: string,
@@ -467,6 +746,33 @@ export async function getLatestByTypePageBefore(
   };
 }
 
+export async function getLatestByTypePageBeforeLite(
+  type: ArticleType,
+  beforeIso: string,
+  page = 1,
+  perPage = 20,
+  options: { includeBody?: boolean } = {}
+) {
+  const client = getSupabase();
+  const safePage = Math.max(1, page);
+  const safePerPage = Math.min(100, Math.max(1, perPage));
+  const from = (safePage - 1) * safePerPage;
+  const to = from + safePerPage - 1;
+  const selectFields = options.includeBody ? LIST_FIELDS_WITH_BODY : LIST_FIELDS;
+  const { data, error, count } = await client
+    .from("articles")
+    .select(selectFields, { count: "exact" })
+    .eq("type", type)
+    .lte("published_at", beforeIso)
+    .order("published_at", { ascending: false })
+    .range(from, to);
+  if (error) throw error;
+  return {
+    items: (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>)),
+    total: count ?? 0,
+  };
+}
+
 export async function getLatestByTypePageAfter(
   type: ArticleType,
   afterIso: string,
@@ -488,6 +794,33 @@ export async function getLatestByTypePageAfter(
   if (error) throw error;
   return {
     items: (data ?? []).map((row) => normalizeArticle(row as Article)),
+    total: count ?? 0,
+  };
+}
+
+export async function getLatestByTypePageAfterLite(
+  type: ArticleType,
+  afterIso: string,
+  page = 1,
+  perPage = 20,
+  options: { includeBody?: boolean } = {}
+) {
+  const client = getSupabase();
+  const safePage = Math.max(1, page);
+  const safePerPage = Math.min(100, Math.max(1, perPage));
+  const from = (safePage - 1) * safePerPage;
+  const to = from + safePerPage - 1;
+  const selectFields = options.includeBody ? LIST_FIELDS_WITH_BODY : LIST_FIELDS;
+  const { data, error, count } = await client
+    .from("articles")
+    .select(selectFields, { count: "exact" })
+    .eq("type", type)
+    .gt("published_at", afterIso)
+    .order("published_at", { ascending: true })
+    .range(from, to);
+  if (error) throw error;
+  return {
+    items: (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>)),
     total: count ?? 0,
   };
 }
@@ -649,6 +982,20 @@ export type GenreStat = Database["public"]["Views"]["genre_stats"]["Row"];
 export type MakerStat = Database["public"]["Views"]["maker_stats"]["Row"];
 export type TagStat = Database["public"]["Views"]["tag_stats"]["Row"];
 export type ActressCoverStat = Database["public"]["Views"]["actress_covers"]["Row"];
+
+export type RankingWindow = "daily" | "weekly" | "monthly";
+
+export async function getWorkRankingSlugs(period: RankingWindow, limit = 20) {
+  const client = getSupabase();
+  const { data, error } = await client
+    .from("work_rankings")
+    .select("slug,views")
+    .eq("period", period)
+    .order("views", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as { slug: string; views: number }[];
+}
 
 export async function getActressStats(limit = 5000) {
   const client = getSupabase();
