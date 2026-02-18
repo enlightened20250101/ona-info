@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import Script from "next/script";
+import AssistAdsSlot from "@/components/AssistAdsSlot";
 import { Metadata } from "next";
 import {
   getActressRanking,
@@ -272,10 +272,14 @@ export default async function Home({
 
       <section className="mx-auto mt-6 w-full max-w-6xl">
         <div className="space-y-10">
-            <div className="flex items-center justify-center">
-              <Script
-                src="https://media.assistads.net/19103.js"
-                strategy="afterInteractive"
+          <div className="space-y-4">
+            <div className="flex items-center justify-center lg:hidden -mx-6">
+              <AssistAdsSlot
+                zoneId="19103"
+                width={300}
+                height={250}
+                fluid
+                className="w-full"
               />
             </div>
             <section className="rounded-[28px] border border-border bg-card p-6 shadow-[0_30px_70px_-45px_rgba(0,0,0,0.35)]">
@@ -322,8 +326,9 @@ export default async function Home({
                 ))}
               </div>
             </section>
+          </div>
 
-            <section className="rounded-[28px] border border-border bg-card p-6">
+          <section className="rounded-[28px] border border-border bg-card p-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted">
                   作品ランキング
