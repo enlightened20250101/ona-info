@@ -10,6 +10,7 @@ type FetchFanzaOptions = {
   offsetStart?: number;
   maxPages?: number;
   stopWhenTargetReached?: boolean;
+  sort?: string;
 };
 
 function buildLitevideoEmbedHtml(contentId: string, affiliateId: string, size: string) {
@@ -31,7 +32,7 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
   const site = getEnv("DMM_SITE", "FANZA");
   const hits = Number(getEnv("DMM_HITS_PER_RUN", "3"));
   const targetNew = Math.max(1, options.targetNew ?? hits);
-  const sort = getEnv("DMM_SORT", "date");
+  const sort = options.sort ?? getEnv("DMM_SORT", "date");
   const serviceParam = getEnv("DMM_SERVICE_PARAM", "service");
   const floorParam = getEnv("DMM_FLOOR_PARAM", "floor");
   const serviceValue = getEnv("DMM_SERVICE", "digital");

@@ -216,6 +216,7 @@ type FanzaIngestOptions = {
   offsetStart?: number;
   maxPages?: number;
   stopWhenTargetReached?: boolean;
+  sort?: string;
 };
 
 async function ingestFanzaWorks(options: FanzaIngestOptions = {}) {
@@ -228,6 +229,7 @@ async function ingestFanzaWorks(options: FanzaIngestOptions = {}) {
     offsetStart: options.offsetStart,
     maxPages: options.maxPages,
     stopWhenTargetReached: options.stopWhenTargetReached,
+    sort: options.sort,
   });
   const total = raws.length;
 
@@ -379,7 +381,7 @@ async function ingestGsheetEmbeds() {
     return record;
   });
 
-  let upserted = 0;
+  let inserted = 0;
   let skipped = 0;
   for (const record of records) {
     const article = normalizeSheetRow(record);
@@ -387,12 +389,16 @@ async function ingestGsheetEmbeds() {
       skipped += 1;
       continue;
     }
-    const result = await upsertArticle(article);
-    logLine(`GSheet ${article.slug}: ${result.status}`);
-    upserted += 1;
+    const result = await insertArticleIfNew(article);
+    if (result.status === "inserted") {
+      logLine(`GSheet ${article.slug}: inserted`);
+      inserted += 1;
+    } else {
+      skipped += 1;
+    }
   }
 
-  return { upserted, skipped, fetched: records.length };
+  return { inserted, skipped, fetched: records.length };
 }
 
 async function sendNotification(message: string) {
@@ -419,6 +425,18 @@ function parseMode() {
   return "";
 }
 
+function parseFanzaSortArg() {
+  const sortArg = process.argv.find((arg) => arg.startsWith("--dmm-sort="));
+  if (sortArg) {
+    return sortArg.split("=")[1]?.trim() || "";
+  }
+  const altArg = process.argv.find((arg) => arg.startsWith("--fanza-sort="));
+  if (altArg) {
+    return altArg.split("=")[1]?.trim() || "";
+  }
+  return "";
+}
+
 async function refreshActressStatsSafe() {
   const refresh = process.env.REFRESH_ACTRESS_STATS ?? "true";
   if (refresh === "false") return;
@@ -440,6 +458,7 @@ async function run() {
   logLine("Ingest started");
 
   const mode = parseMode();
+  const fanzaSort = parseFanzaSortArg();
   const archiveMode = mode === "archive";
   if (archiveMode) {
     const offsetStart = Number(process.env.DMM_ARCHIVE_OFFSET_START ?? "1");
@@ -455,6 +474,7 @@ async function run() {
             maxPages,
             targetNew,
             stopWhenTargetReached: false,
+            sort: fanzaSort || undefined,
           }),
       },
     ];
@@ -501,7 +521,7 @@ async function run() {
     { name: "gsheet", run: ingestGsheetEmbeds },
     { name: "summaries", run: ingestSummaries },
     { name: "rankings", run: ingestRankings },
-    { name: "fanza", run: ingestFanzaWorks },
+    { name: "fanza", run: () => ingestFanzaWorks(fanzaSort ? { sort: fanzaSort } : {}) },
   ];
 
   const results = await Promise.allSettled(tasks.map((task) => task.run()));

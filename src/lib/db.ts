@@ -536,27 +536,31 @@ export async function getWorksByMetaTagPageLite(
   const from = (safePage - 1) * safePerPage;
   const to = from + safePerPage - 1;
 
-  let builder = client
-    .from("articles")
-    .select(LIST_FIELDS, { count: "exact" })
-    .eq("type", "work");
+  try {
+    let builder = client
+      .from("articles")
+      .select(LIST_FIELDS, { count: "exact" })
+      .eq("type", "work");
 
-  if (tag.startsWith("genre:")) {
-    const value = tag.replace("genre:", "");
-    builder = builder.contains("meta_genres", [value]);
-  } else if (tag.startsWith("maker:")) {
-    const value = tag.replace("maker:", "");
-    builder = builder.contains("meta_makers", [value]);
+    if (tag.startsWith("genre:")) {
+      const value = tag.replace("genre:", "");
+      builder = builder.contains("meta_genres", [value]);
+    } else if (tag.startsWith("maker:")) {
+      const value = tag.replace("maker:", "");
+      builder = builder.contains("meta_makers", [value]);
+    }
+
+    const { data, error, count } = await builder
+      .order("published_at", { ascending: false })
+      .range(from, to);
+    if (error) throw error;
+    return {
+      items: (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>)),
+      total: count ?? 0,
+    };
+  } catch {
+    return { items: [], total: 0 };
   }
-
-  const { data, error, count } = await builder
-    .order("published_at", { ascending: false })
-    .range(from, to);
-  if (error) throw error;
-  return {
-    items: (data ?? []).map((row) => normalizeArticleLite(row as Partial<Article>)),
-    total: count ?? 0,
-  };
 }
 
 export async function getArticlesBySlugs(type: ArticleType, slugs: string[]) {
