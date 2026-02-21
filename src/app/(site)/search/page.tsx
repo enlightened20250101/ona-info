@@ -30,6 +30,7 @@ export const metadata: Metadata = {
     title: `検索 | ${SITE.name}`,
     description: "作品番号・女優・タグで検索できます。",
     type: "website",
+    url: `${SITE.url.replace(/\/$/, "")}/search`,
   },
 };
 
@@ -334,7 +335,12 @@ export default async function SearchPage({
           ) : null}
 
           {query && total === 0 ? (
-            <p className="mt-3 text-sm text-muted">該当する記事が見つかりませんでした。</p>
+            <div className="mt-3 space-y-1 text-sm text-muted">
+              <p>該当する記事が見つかりませんでした。</p>
+              <p className="text-xs text-muted">
+                検索結果が0件のため、このページはインデックス対象外です。
+              </p>
+            </div>
           ) : null}
 
           {query && total > 0 ? (
@@ -351,7 +357,7 @@ export default async function SearchPage({
                       {cover ? (
                         <SafeImage
                           src={cover}
-                          alt={article.title}
+                          alt={`${article.title} ${article.slug}`}
                           fill
                           sizes="(min-width: 640px) 50vw, 100vw"
                           unoptimized={shouldBypassNextImage(cover)}

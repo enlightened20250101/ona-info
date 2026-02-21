@@ -11,6 +11,7 @@ type Props = {
 };
 
 export default function Breadcrumbs({ items }: Props) {
+  const base = SITE.url.replace(/\/$/, "");
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -18,7 +19,7 @@ export default function Breadcrumbs({ items }: Props) {
       "@type": "ListItem",
       position: index + 1,
       name: item.label,
-      item: item.href ? `${SITE.url}${item.href}` : SITE.url,
+      item: item.href ? `${base}${item.href}` : base,
     })),
   };
 

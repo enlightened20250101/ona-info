@@ -21,6 +21,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
+  const previewResult = await getWorksByActressPage(slug, 1, 1);
+  const previewImage =
+    previewResult.items[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(previewResult.items[0].images[0].url)
+      ? previewResult.items[0].images[0].url
+      : undefined;
   return {
     title: `${slug} エロ動画・動画・出演作品 | ${SITE.name}`,
     description: `${slug}のエロ動画・動画・出演作品を無料でチェック。最新の関連作品をまとめて紹介。`,
@@ -35,6 +41,7 @@ export async function generateMetadata({
       title: `${slug} エロ動画・動画・出演作品 | ${SITE.name}`,
       description: `${slug}のエロ動画・動画・出演作品を無料でチェック。`,
       type: "profile",
+      images: previewImage ? [{ url: previewImage }] : undefined,
     },
   };
 }
@@ -55,6 +62,7 @@ export default async function ActressPage({
   const worksResult = await getWorksByActressPage(slug, page, perPage);
   const works = worksResult.items;
   const base = SITE.url.replace(/\/$/, "");
+  const actressUrl = `${base}/actresses/${encodeURIComponent(slug)}`;
   const itemList = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -128,6 +136,24 @@ export default async function ActressPage({
       },
     ],
   };
+  const personLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: slug,
+    url: actressUrl,
+    mainEntityOfPage: actressUrl,
+  };
+  const profilePageLd = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    name: `${slug}のプロフィール`,
+    url: actressUrl,
+    mainEntity: {
+      "@type": "Person",
+      name: slug,
+      url: actressUrl,
+    },
+  };
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
@@ -136,6 +162,16 @@ export default async function ActressPage({
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
+        />
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd) }}
+        />
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(profilePageLd) }}
         />
         <script
           type="application/ld+json"
@@ -187,7 +223,7 @@ export default async function ActressPage({
                     <div className="relative h-32 w-full">
                       <SafeImage
                         src={work.images[0].url}
-                        alt={work.images[0].alt}
+                        alt={`${work.title} ${work.slug} サムネイル`}
                         fill
                         sizes="(min-width: 640px) 50vw, 100vw"
                         unoptimized={shouldBypassNextImage(work.images[0].url)}
@@ -287,7 +323,7 @@ export default async function ActressPage({
                     <div className="relative h-32 w-full">
                       <SafeImage
                         src={work.images[0].url}
-                        alt={work.images[0].alt}
+                        alt={`${work.title} ${work.slug} サムネイル`}
                         fill
                         sizes="(min-width: 640px) 50vw, 100vw"
                         unoptimized={shouldBypassNextImage(work.images[0].url)}

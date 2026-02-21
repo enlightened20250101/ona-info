@@ -19,6 +19,20 @@ export async function generateMetadata({
   const { tag } = await params;
   const normalizedTag = normalizeTag(tag) || tag || "タグ";
   const label = tagLabel(normalizedTag);
+  const previewResult = await getLatestByType("work", 60);
+  const previewWork = previewResult.find((work) => {
+    const text = `${work.title} ${work.summary}`;
+    const metaTags = buildMetaTagsFromWork(work);
+    return (
+      extractTags(text).includes(normalizedTag) ||
+      metaTags.includes(normalizedTag) ||
+      text.includes(label)
+    );
+  });
+  const previewImage =
+    previewWork?.images?.[0]?.url && !isLikelyInvalidImageUrl(previewWork.images[0].url)
+      ? previewWork.images[0].url
+      : undefined;
   return {
     title: `#${label} エロ動画・動画・作品 | ${SITE.name}`,
     description: `#${label}のエロ動画・動画・関連作品を無料でチェック。話題の作品やトピックをまとめて紹介。`,
@@ -33,6 +47,7 @@ export async function generateMetadata({
       title: `#${label} エロ動画・動画・作品 | ${SITE.name}`,
       description: `#${label}のエロ動画・動画・関連作品を無料でチェック。`,
       type: "website",
+      images: previewImage ? [{ url: previewImage }] : undefined,
     },
   };
 }
@@ -82,13 +97,6 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
   const keyword = tagLabel(normalizedTag);
   const trend = buildTagTrendFromArticles(normalizedTag, articles);
   const base = SITE.url.replace(/\/$/, "");
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: `#${keyword}`,
-    url: `${base}/tags/${encodeURIComponent(normalizedTag)}`,
-    description: `#${keyword}のエロ動画・関連作品をまとめて紹介。`,
-  };
 
   const matched = articles.filter((article) => {
     const text = `${article.title} ${article.summary}`;
@@ -110,6 +118,30 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
       text.includes(keyword)
     );
   });
+  const previewImage =
+    popularWorks[0]?.images?.[0]?.url && !isLikelyInvalidImageUrl(popularWorks[0].images[0].url)
+      ? popularWorks[0].images[0].url
+      : null;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@id": `${base}/tags/${encodeURIComponent(normalizedTag)}#collection`,
+    "@type": "CollectionPage",
+    name: `#${keyword}`,
+    url: `${base}/tags/${encodeURIComponent(normalizedTag)}`,
+    description: `#${keyword}のエロ動画・関連作品をまとめて紹介。`,
+    isPartOf: {
+      "@type": "CollectionPage",
+      "@id": `${base}/tags#collection`,
+      name: "タグ一覧・エロ動画",
+      url: `${base}/tags`,
+    },
+    primaryImageOfPage: previewImage
+      ? {
+          "@type": "ImageObject",
+          url: previewImage,
+        }
+      : undefined,
+  };
 
   const relatedMetaTags = Array.from(
     new Set(
@@ -270,7 +302,7 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
                     <div className="relative h-32 w-full">
                       <SafeImage
                         src={work.images[0].url}
-                        alt={work.images[0].alt}
+                        alt={`${work.title} ${work.slug} サムネイル`}
                         fill
                         sizes="(min-width: 640px) 50vw, 100vw"
                         unoptimized={shouldBypassNextImage(work.images[0].url)}
@@ -368,7 +400,7 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
                     !isLikelyInvalidImageUrl(topic.images[0].url) ? (
                       <SafeImage
                         src={topic.images[0].url}
-                        alt={topic.images[0].alt}
+                        alt={`${topic.title} サムネイル`}
                         fill
                         sizes="(min-width: 640px) 50vw, 100vw"
                         unoptimized={shouldBypassNextImage(topic.images[0].url)}
@@ -413,7 +445,7 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
                     !isLikelyInvalidImageUrl(article.images[0].url) ? (
                       <SafeImage
                         src={article.images[0].url}
-                        alt={article.title}
+                        alt={`${article.title} ${article.slug}`}
                         fill
                         sizes="(min-width: 640px) 50vw, 100vw"
                         unoptimized={shouldBypassNextImage(article.images[0].url)}

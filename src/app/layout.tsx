@@ -45,6 +45,7 @@ export default function RootLayout({
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
   const webSiteJsonLd = {
     "@context": "https://schema.org",
+    "@id": `${siteUrl}/#website`,
     "@type": "WebSite",
     name: SITE.name,
     url: siteUrl,

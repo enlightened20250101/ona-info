@@ -5,22 +5,46 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { getActressCovers, getActressRanking, getLatestByType } from "@/lib/db";
 import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
 import { SITE } from "@/lib/site";
-import { shouldBypassNextImage } from "@/lib/image";
+import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: `女優ランキング | ${SITE.name}`,
-  description: "出演数から算出した女優ランキング。",
-  alternates: {
-    canonical: `${SITE.url.replace(/\/$/, "")}/actresses/ranking`,
-  },
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  const works = await getLatestByType("work", 200);
+  const rankingStats = await getActressRanking(1);
+  const coverMap = await getActressCovers(rankingStats.map((row) => row.actress));
+  const coverPoolSingle = buildActressCoverPool(works, { singleOnly: true });
+  const coverPoolAll = buildActressCoverPool(works);
+  const topSlug = rankingStats[0]?.actress ?? null;
+  const previewImage =
+    topSlug
+      ? pickDailyRandomCover(topSlug, coverPoolSingle, null, "ranking-og-single") ??
+        pickDailyRandomCover(
+          topSlug,
+          coverPoolAll,
+          coverMap.get(topSlug) ??
+            works.find((work) => work.related_actresses.includes(topSlug))?.images?.[0]?.url ??
+            null,
+          "ranking-og"
+        )
+      : null;
+  const previewUrl =
+    previewImage && !isLikelyInvalidImageUrl(previewImage) ? previewImage : undefined;
+
+  return {
     title: `女優ランキング | ${SITE.name}`,
     description: "出演数から算出した女優ランキング。",
-    type: "website",
-  },
-};
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/actresses/ranking`,
+    },
+    openGraph: {
+      title: `女優ランキング | ${SITE.name}`,
+      description: "出演数から算出した女優ランキング。",
+      type: "website",
+      images: previewUrl ? [{ url: previewUrl }] : undefined,
+    },
+  };
+}
 
 export default async function ActressRankingPage() {
   const works = await getLatestByType("work", 200);
@@ -44,8 +68,33 @@ export default async function ActressRankingPage() {
       null,
   }));
 
+  const base = SITE.url.replace(/\/$/, "");
+  const primaryImage =
+    ranking[0]?.image && !isLikelyInvalidImageUrl(ranking[0].image)
+      ? ranking[0].image
+      : undefined;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@id": `${base}/actresses/ranking#collection`,
+    "@type": "CollectionPage",
+    name: "女優ランキング",
+    url: `${base}/actresses/ranking`,
+    description: "出演数から算出した女優ランキング。",
+    primaryImageOfPage: primaryImage
+      ? {
+          "@type": "ImageObject",
+          url: primaryImage,
+        }
+      : undefined,
+  };
+
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <Breadcrumbs
           items={[
@@ -71,7 +120,7 @@ export default async function ActressRankingPage() {
                 {item.image ? (
                   <SafeImage
                     src={item.image}
-                    alt={item.slug}
+                    alt={`${item.slug} 出演作品`}
                     fill
                     sizes="(min-width: 640px) 50vw, 100vw"
                     unoptimized={shouldBypassNextImage(item.image)}

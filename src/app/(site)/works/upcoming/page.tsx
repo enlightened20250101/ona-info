@@ -69,7 +69,7 @@ export default async function UpcomingWorksPage({
                 <div className="relative h-40 w-full">
                   <SafeImage
                     src={work.images[0].url}
-                    alt={work.images[0].alt}
+                    alt={`${work.title} ${work.slug} サムネイル`}
                     fill
                     sizes="(min-width: 640px) 50vw, 100vw"
                     unoptimized={shouldBypassNextImage(work.images[0].url)}

@@ -87,14 +87,29 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
   const relatedActresses = article.related_actresses;
   const tags = extractTags(`${article.title} ${article.summary}`);
   const keywordPool = tags.flatMap(tagKeywords);
+  const about = tags.map((tag) => ({
+    "@type": "Thing",
+    name: tagLabel(tag),
+  }));
+  const base = SITE.url.replace(/\/$/, "");
   const structuredData = {
     "@context": "https://schema.org",
+    "@id": `${base}/topics/${article.slug}#article`,
     "@type": "Article",
     headline: article.title,
     description: article.summary,
     datePublished: article.published_at,
     dateModified: article.fetched_at,
-    mainEntityOfPage: `${SITE.url.replace(/\/$/, "")}/topics/${article.slug}`,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${base}/topics/${article.slug}`,
+    },
+    isPartOf: {
+      "@type": "CollectionPage",
+      "@id": `${base}/topics#collection`,
+      name: "エロ動画トピック",
+      url: `${base}/topics`,
+    },
     image: article.images?.[0]?.url ? [article.images[0].url] : undefined,
     author: {
       "@type": "Organization",
@@ -104,6 +119,13 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
       "@type": "Organization",
       name: SITE.name,
     },
+    about: about.length > 0 ? about : undefined,
+    primaryImageOfPage: article.images?.[0]?.url
+      ? {
+          "@type": "ImageObject",
+          url: article.images[0].url,
+        }
+      : undefined,
   };
 
   return (
@@ -168,7 +190,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
                     <div className="relative h-32 w-full">
                       <SafeImage
                         src={work!.images[0].url}
-                        alt={work!.images[0].alt}
+                        alt={`${work!.title} ${work!.slug} サムネイル`}
                         fill
                         sizes="(min-width: 640px) 50vw, 100vw"
                         unoptimized={shouldBypassNextImage(work!.images[0].url)}
@@ -211,7 +233,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
                       {cover ? (
                         <SafeImage
                           src={cover}
-                          alt={actressSlug}
+                          alt={`${actressSlug} 出演作品`}
                           fill
                           sizes="(min-width: 640px) 50vw, 100vw"
                           unoptimized={shouldBypassNextImage(cover)}

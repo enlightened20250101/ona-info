@@ -21,18 +21,45 @@ import {
   isAvailableWork,
   isUpcomingWork,
 } from "@/lib/releaseDate";
+import { isLikelyInvalidImageUrl } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: `${SITE.name} | 自動更新AV情報`,
-  description: SITE.description,
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  const now = getJstNow();
+  const nowIso = now.toISOString();
+  const availableWorks = await getLatestByTypeBeforeLite("work", nowIso, 30, {
+    includeBody: false,
+  });
+  const heroCandidates = availableWorks.filter((work) => work.images[0]?.url);
+  const heroFallback = heroCandidates.length > 0 ? heroCandidates : availableWorks;
+  const heroWorks = pickDailyRandom(heroFallback, 9);
+  const heroSlugs = new Set(heroWorks.map((work) => work.slug));
+  const recommendedCandidates = availableWorks.filter(
+    (work) => work.images[0]?.url && !heroSlugs.has(work.slug)
+  );
+  const recommendedFallback =
+    recommendedCandidates.length > 0
+      ? recommendedCandidates
+      : availableWorks.filter((work) => !heroSlugs.has(work.slug));
+  const recommendedWorks = pickDailyRandom(recommendedFallback, 9);
+  const previewImage =
+    recommendedWorks[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(recommendedWorks[0].images[0].url)
+      ? recommendedWorks[0].images[0].url
+      : undefined;
+
+  return {
     title: `${SITE.name} | 自動更新AV情報`,
     description: SITE.description,
-    type: "website",
-  },
-};
+    openGraph: {
+      title: `${SITE.name} | 自動更新AV情報`,
+      description: SITE.description,
+      type: "website",
+      images: previewImage ? [{ url: previewImage }] : undefined,
+    },
+  };
+}
 
 function seedFromString(value: string) {
   let hash = 0;
@@ -188,9 +215,51 @@ export default async function Home({
     article.type !== "work" ? true : isAvailableWork(article, now)
   );
   const visualArticles = (filteredLatest.length > 0 ? filteredLatest : latestPage).slice(0, 12);
+  const base = SITE.url.replace(/\/$/, "");
+  const primaryImage =
+    recommendedWorks[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(recommendedWorks[0].images[0].url)
+      ? recommendedWorks[0].images[0].url
+      : undefined;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@id": `${base}/#webpage`,
+    "@type": "WebPage",
+    name: SITE.name,
+    url: base,
+    description: SITE.description,
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": `${base}/#website`,
+      name: SITE.name,
+      url: base,
+    },
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: base,
+        },
+      ],
+    },
+    primaryImageOfPage: primaryImage
+      ? {
+          "@type": "ImageObject",
+          url: primaryImage,
+        }
+      : undefined,
+  };
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-10 sm:px-10">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <header className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[1.2fr_1fr]">
         <div className="relative rounded-[32px] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,244,244,0.9))] p-6 shadow-[0_35px_80px_-55px_rgba(0,0,0,0.5)] sm:p-8">
           <div className="pointer-events-none absolute inset-0 rounded-[32px] border border-white/60" />

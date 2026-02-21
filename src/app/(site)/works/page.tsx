@@ -6,22 +6,49 @@ import { buildPagination } from "@/lib/pagination";
 import { getLatestByTypePageBeforeLite, searchArticlesPage } from "@/lib/db";
 import { SITE } from "@/lib/site";
 import { getJstNow } from "@/lib/releaseDate";
-import { shouldBypassNextImage } from "@/lib/image";
+import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: `エロ動画・作品一覧 | ${SITE.name}`,
-  description: "最新のエロ動画・作品一覧を無料でチェック。話題の作品をまとめて紹介。",
-  alternates: {
-    canonical: `${SITE.url.replace(/\/$/, "")}/works`,
-  },
-  openGraph: {
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const query = (sp.q ?? "").trim().toLowerCase();
+  const page = Math.max(1, Number(sp.page ?? "1") || 1);
+  const perPage = 1;
+  const now = getJstNow();
+  const beforeIso = now.toISOString();
+  const result = query
+    ? await searchArticlesPage({ query, type: "work", page, perPage, beforeIso })
+    : await getLatestByTypePageBeforeLite("work", beforeIso, page, perPage);
+  const previewImage =
+    result.items[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(result.items[0].images[0].url)
+      ? result.items[0].images[0].url
+      : undefined;
+  const noindex = result.total === 0;
+
+  return {
     title: `エロ動画・作品一覧 | ${SITE.name}`,
     description: "最新のエロ動画・作品一覧を無料でチェック。話題の作品をまとめて紹介。",
-    type: "website",
-  },
-};
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/works`,
+    },
+    robots: {
+      index: !noindex,
+      follow: true,
+    },
+    openGraph: {
+      title: `エロ動画・作品一覧 | ${SITE.name}`,
+      description: "最新のエロ動画・作品一覧を無料でチェック。話題の作品をまとめて紹介。",
+      type: "website",
+      images: previewImage ? [{ url: previewImage }] : undefined,
+    },
+  };
+}
 
 export default async function WorksPage({
   searchParams,
@@ -49,15 +76,27 @@ export default async function WorksPage({
   const pagination = buildPagination(safePage, totalPages);
 
   const base = SITE.url.replace(/\/$/, "");
+  const previewImage =
+    pageItems[0]?.images?.[0]?.url && !isLikelyInvalidImageUrl(pageItems[0].images[0].url)
+      ? pageItems[0].images[0].url
+      : undefined;
   const structuredData = {
     "@context": "https://schema.org",
+    "@id": `${base}/works#collection`,
     "@type": "CollectionPage",
     name: "エロ動画・作品一覧",
     url: `${base}/works`,
     description: "最新のエロ動画・作品一覧を無料でチェック。話題の作品をまとめて紹介。",
+    primaryImageOfPage: previewImage
+      ? {
+          "@type": "ImageObject",
+          url: previewImage,
+        }
+      : undefined,
   };
   const listLd = {
     "@context": "https://schema.org",
+    "@id": `${base}/works#itemlist`,
     "@type": "ItemList",
     name: "最新の作品",
     itemListElement: pageItems.slice(0, 12).map((work, index) => ({
@@ -148,11 +187,11 @@ export default async function WorksPage({
               href={`/works/${work.slug}`}
               className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
             >
-              {work.images?.[0]?.url ? (
+              {work.images?.[0]?.url && !isLikelyInvalidImageUrl(work.images[0].url) ? (
                 <div className="relative h-40 w-full">
                   <SafeImage
                     src={work.images[0].url}
-                    alt={work.images[0].alt}
+                    alt={`${work.title} ${work.slug} サムネイル`}
                     fill
                     sizes="(min-width: 640px) 50vw, 100vw"
                     unoptimized={shouldBypassNextImage(work.images[0].url)}

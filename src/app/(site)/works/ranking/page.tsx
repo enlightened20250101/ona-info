@@ -8,27 +8,64 @@ import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: `作品ランキング | ${SITE.name}`,
-  description: "人気作品ランキングをまとめて紹介。",
-  alternates: {
-    canonical: `${SITE.url.replace(/\/$/, "")}/works/ranking`,
-  },
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  const topics = await getLatestByType("topic", 60);
+  const rankingTopics = topics.filter((topic) =>
+    topic.source_url.startsWith("internal:ranking:")
+  );
+  const previewImage =
+    rankingTopics[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(rankingTopics[0].images[0].url)
+      ? rankingTopics[0].images[0].url
+      : undefined;
+
+  return {
     title: `作品ランキング | ${SITE.name}`,
     description: "人気作品ランキングをまとめて紹介。",
-    type: "website",
-  },
-};
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/works/ranking`,
+    },
+    openGraph: {
+      title: `作品ランキング | ${SITE.name}`,
+      description: "人気作品ランキングをまとめて紹介。",
+      type: "website",
+      images: previewImage ? [{ url: previewImage }] : undefined,
+    },
+  };
+}
 
 export default async function WorksRankingPage() {
   const topics = await getLatestByType("topic", 60);
   const rankingTopics = topics.filter((topic) =>
     topic.source_url.startsWith("internal:ranking:")
   );
+  const base = SITE.url.replace(/\/$/, "");
+  const primaryImage =
+    rankingTopics[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(rankingTopics[0].images[0].url)
+      ? rankingTopics[0].images[0].url
+      : undefined;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "作品ランキング",
+    url: `${base}/works/ranking`,
+    description: "人気作品ランキングをまとめて紹介。",
+    primaryImageOfPage: primaryImage
+      ? {
+          "@type": "ImageObject",
+          url: primaryImage,
+        }
+      : undefined,
+  };
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <Breadcrumbs
           items={[
@@ -60,7 +97,7 @@ export default async function WorksRankingPage() {
                   !isLikelyInvalidImageUrl(topic.images[0].url) ? (
                     <SafeImage
                       src={topic.images[0].url}
-                      alt={topic.title}
+                      alt={`${topic.title} サムネイル`}
                       fill
                       sizes="(min-width: 640px) 50vw, 100vw"
                       unoptimized={shouldBypassNextImage(topic.images[0].url)}

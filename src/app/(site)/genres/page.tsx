@@ -3,23 +3,54 @@ import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
 import { tagLabel } from "@/lib/tagging";
-import { getGenreStats, getTopGenres } from "@/lib/db";
+import { getGenreStats, getTopGenres, getWorksByMetaTagPageLite } from "@/lib/db";
 import { SITE } from "@/lib/site";
+import { isLikelyInvalidImageUrl } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: `ジャンル一覧 | ${SITE.name}`,
-  description: "作品から抽出したジャンル一覧。",
-  alternates: {
-    canonical: `${SITE.url.replace(/\/$/, "")}/genres`,
-  },
-  openGraph: {
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const query = (sp.q ?? "").trim().toLowerCase();
+  const stats = await getGenreStats(5000);
+  const counts = stats.map((row) => [`genre:${row.genre}`, row.work_count] as const);
+  const genres = counts.map(([tag]) => tag).sort((a, b) => a.localeCompare(b));
+  const filtered = query
+    ? genres.filter((tag) => tagLabel(tag).toLowerCase().includes(query))
+    : genres;
+  const topTag = filtered[0] ?? null;
+  const previewResult = topTag
+    ? await getWorksByMetaTagPageLite(topTag, 1, 1)
+    : { items: [] };
+  const previewImage =
+    previewResult.items[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(previewResult.items[0].images[0].url)
+      ? previewResult.items[0].images[0].url
+      : undefined;
+  const noindex = filtered.length === 0;
+
+  return {
     title: `ジャンル一覧 | ${SITE.name}`,
     description: "作品から抽出したジャンル一覧。",
-    type: "website",
-  },
-};
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/genres`,
+    },
+    robots: {
+      index: !noindex,
+      follow: true,
+    },
+    openGraph: {
+      title: `ジャンル一覧 | ${SITE.name}`,
+      description: "作品から抽出したジャンル一覧。",
+      type: "website",
+      images: previewImage ? [{ url: previewImage }] : undefined,
+    },
+  };
+}
 
 export default async function GenresPage({
   searchParams,
@@ -48,12 +79,40 @@ export default async function GenresPage({
   const pagination = buildPagination(safePage, totalPages);
 
   const base = SITE.url.replace(/\/$/, "");
+  const topTag = topStats[0]?.genre ? `genre:${topStats[0].genre}` : null;
+  const previewResult = topTag
+    ? await getWorksByMetaTagPageLite(topTag, 1, 1)
+    : { items: [] };
+  const previewImage =
+    previewResult.items[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(previewResult.items[0].images[0].url)
+      ? previewResult.items[0].images[0].url
+      : undefined;
   const structuredData = {
     "@context": "https://schema.org",
+    "@id": `${base}/genres#collection`,
     "@type": "CollectionPage",
     name: "ジャンル一覧",
     url: `${base}/genres`,
     description: "作品から抽出したジャンル一覧。",
+    primaryImageOfPage: previewImage
+      ? {
+          "@type": "ImageObject",
+          url: previewImage,
+        }
+      : undefined,
+  };
+  const itemList = {
+    "@context": "https://schema.org",
+    "@id": `${base}/genres#itemlist`,
+    "@type": "ItemList",
+    name: "ジャンル一覧",
+    itemListElement: pageItems.map((tag, index) => ({
+      "@type": "ListItem",
+      position: start + index + 1,
+      url: `${base}/tags/${encodeURIComponent(tag)}`,
+      name: tagLabel(tag),
+    })),
   };
 
   return (
@@ -62,6 +121,11 @@ export default async function GenresPage({
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <Breadcrumbs

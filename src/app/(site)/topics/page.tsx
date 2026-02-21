@@ -9,18 +9,43 @@ import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: `エロ動画トピック | ${SITE.name}`,
-  description: "最新のエロ動画トピック一覧を無料でチェック。話題の配信や人気キーワードを紹介。",
-  alternates: {
-    canonical: `${SITE.url.replace(/\/$/, "")}/topics`,
-  },
-  openGraph: {
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const query = (sp.q ?? "").trim().toLowerCase();
+  const page = Math.max(1, Number(sp.page ?? "1") || 1);
+  const perPage = 1;
+  const result = query
+    ? await searchArticlesPage({ query, type: "topic", page, perPage })
+    : await getLatestByTypePage("topic", page, perPage);
+  const previewImage =
+    result.items[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(result.items[0].images[0].url)
+      ? result.items[0].images[0].url
+      : undefined;
+  const noindex = result.total === 0;
+
+  return {
     title: `エロ動画トピック | ${SITE.name}`,
     description: "最新のエロ動画トピック一覧を無料でチェック。話題の配信や人気キーワードを紹介。",
-    type: "website",
-  },
-};
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/topics`,
+    },
+    robots: {
+      index: !noindex,
+      follow: true,
+    },
+    openGraph: {
+      title: `エロ動画トピック | ${SITE.name}`,
+      description: "最新のエロ動画トピック一覧を無料でチェック。話題の配信や人気キーワードを紹介。",
+      type: "website",
+      images: previewImage ? [{ url: previewImage }] : undefined,
+    },
+  };
+}
 
 export default async function TopicsPage({
   searchParams,
@@ -44,15 +69,35 @@ export default async function TopicsPage({
   const pagination = buildPagination(safePage, totalPages);
 
   const base = SITE.url.replace(/\/$/, "");
+  const previewImage =
+    pageItems[0]?.images?.[0]?.url && !isLikelyInvalidImageUrl(pageItems[0].images[0].url)
+      ? pageItems[0].images[0].url
+      : undefined;
+  const rankingTopic = filtered.find((topic) =>
+    topic.source_url.startsWith("internal:ranking:")
+  );
+  const fallbackImage =
+    rankingTopic?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(rankingTopic.images[0].url)
+      ? rankingTopic.images[0].url
+      : undefined;
   const structuredData = {
     "@context": "https://schema.org",
+    "@id": `${base}/topics#collection`,
     "@type": "CollectionPage",
     name: "エロ動画トピック",
     url: `${base}/topics`,
     description: "最新のエロ動画トピック一覧を無料でチェック。話題の配信や人気キーワードを紹介。",
+    primaryImageOfPage: (previewImage ?? fallbackImage)
+      ? {
+          "@type": "ImageObject",
+          url: previewImage ?? fallbackImage,
+        }
+      : undefined,
   };
   const listLd = {
     "@context": "https://schema.org",
+    "@id": `${base}/topics#itemlist`,
     "@type": "ItemList",
     name: "最新トピック",
     itemListElement: pageItems.slice(0, 12).map((topic, index) => ({
@@ -148,7 +193,7 @@ export default async function TopicsPage({
                 !isLikelyInvalidImageUrl(topic.images[0].url) ? (
                   <SafeImage
                     src={topic.images[0].url}
-                    alt={topic.images[0].alt}
+                    alt={`${topic.title} サムネイル`}
                     fill
                     sizes="(min-width: 640px) 50vw, 100vw"
                     unoptimized={shouldBypassNextImage(topic.images[0].url)}

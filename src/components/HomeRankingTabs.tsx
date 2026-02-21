@@ -66,7 +66,7 @@ export default function HomeRankingTabs({
               !isLikelyInvalidImageUrl(work.images[0].url) ? (
                 <SafeImage
                   src={work.images[0].url}
-                  alt={work.images[0]?.alt ?? work.title}
+                  alt={`${work.title} ${work.slug} サムネイル`}
                   fill
                   sizes="96px"
                   unoptimized={shouldBypassNextImage(work.images[0].url)}

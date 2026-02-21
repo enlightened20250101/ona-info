@@ -3,23 +3,54 @@ import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
 import { tagLabel } from "@/lib/tagging";
-import { getMakerStats, getTopMakers } from "@/lib/db";
+import { getMakerStats, getTopMakers, getWorksByMetaTagPageLite } from "@/lib/db";
 import { SITE } from "@/lib/site";
+import { isLikelyInvalidImageUrl } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: `メーカー一覧 | ${SITE.name}`,
-  description: "作品から抽出したメーカー一覧。",
-  alternates: {
-    canonical: `${SITE.url.replace(/\/$/, "")}/makers`,
-  },
-  openGraph: {
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const query = (sp.q ?? "").trim().toLowerCase();
+  const stats = await getMakerStats(5000);
+  const counts = stats.map((row) => [`maker:${row.maker}`, row.work_count] as const);
+  const makers = counts.map(([tag]) => tag).sort((a, b) => a.localeCompare(b));
+  const filtered = query
+    ? makers.filter((tag) => tagLabel(tag).toLowerCase().includes(query))
+    : makers;
+  const topTag = filtered[0] ?? null;
+  const previewResult = topTag
+    ? await getWorksByMetaTagPageLite(topTag, 1, 1)
+    : { items: [] };
+  const previewImage =
+    previewResult.items[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(previewResult.items[0].images[0].url)
+      ? previewResult.items[0].images[0].url
+      : undefined;
+  const noindex = filtered.length === 0;
+
+  return {
     title: `メーカー一覧 | ${SITE.name}`,
     description: "作品から抽出したメーカー一覧。",
-    type: "website",
-  },
-};
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/makers`,
+    },
+    robots: {
+      index: !noindex,
+      follow: true,
+    },
+    openGraph: {
+      title: `メーカー一覧 | ${SITE.name}`,
+      description: "作品から抽出したメーカー一覧。",
+      type: "website",
+      images: previewImage ? [{ url: previewImage }] : undefined,
+    },
+  };
+}
 
 export default async function MakersPage({
   searchParams,
@@ -48,12 +79,40 @@ export default async function MakersPage({
   const pagination = buildPagination(safePage, totalPages);
 
   const base = SITE.url.replace(/\/$/, "");
+  const topTag = topStats[0]?.maker ? `maker:${topStats[0].maker}` : null;
+  const previewResult = topTag
+    ? await getWorksByMetaTagPageLite(topTag, 1, 1)
+    : { items: [] };
+  const previewImage =
+    previewResult.items[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(previewResult.items[0].images[0].url)
+      ? previewResult.items[0].images[0].url
+      : undefined;
   const structuredData = {
     "@context": "https://schema.org",
+    "@id": `${base}/makers#collection`,
     "@type": "CollectionPage",
     name: "メーカー一覧",
     url: `${base}/makers`,
     description: "作品から抽出したメーカー一覧。",
+    primaryImageOfPage: previewImage
+      ? {
+          "@type": "ImageObject",
+          url: previewImage,
+        }
+      : undefined,
+  };
+  const itemList = {
+    "@context": "https://schema.org",
+    "@id": `${base}/makers#itemlist`,
+    "@type": "ItemList",
+    name: "メーカー一覧",
+    itemListElement: pageItems.map((tag, index) => ({
+      "@type": "ListItem",
+      position: start + index + 1,
+      url: `${base}/tags/${encodeURIComponent(tag)}`,
+      name: tagLabel(tag),
+    })),
   };
 
   return (
@@ -62,6 +121,11 @@ export default async function MakersPage({
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <Breadcrumbs

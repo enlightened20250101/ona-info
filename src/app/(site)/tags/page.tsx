@@ -3,8 +3,9 @@ import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
 import { tagLabel } from "@/lib/tagging";
-import { getTagStats, getTopTags } from "@/lib/db";
+import { getTagStats, getTopTags, getWorksByMetaTagPageLite } from "@/lib/db";
 import { SITE } from "@/lib/site";
+import { isLikelyInvalidImageUrl } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
@@ -25,18 +26,47 @@ const TAGS = [
   "event",
 ];
 
-export const metadata: Metadata = {
-  title: `タグ一覧・エロ動画 | ${SITE.name}`,
-  description: "タグ一覧。エロ動画・作品の話題タグを無料でチェック。",
-  alternates: {
-    canonical: `${SITE.url.replace(/\/$/, "")}/tags`,
-  },
-  openGraph: {
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const query = (sp.q ?? "").trim().toLowerCase();
+  const stats = await getTagStats(6000);
+  const merged = Array.from(new Set([...TAGS, ...stats.map((row) => row.tag)]));
+  const filtered = query
+    ? merged.filter((tag) => tagLabel(tag).toLowerCase().includes(query))
+    : merged;
+  const topTag = filtered[0] ?? null;
+  const previewResult = topTag
+    ? await getWorksByMetaTagPageLite(topTag, 1, 1)
+    : { items: [] };
+  const previewImage =
+    previewResult.items[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(previewResult.items[0].images[0].url)
+      ? previewResult.items[0].images[0].url
+      : undefined;
+  const noindex = filtered.length === 0;
+
+  return {
     title: `タグ一覧・エロ動画 | ${SITE.name}`,
     description: "タグ一覧。エロ動画・作品の話題タグを無料でチェック。",
-    type: "website",
-  },
-};
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/tags`,
+    },
+    robots: {
+      index: !noindex,
+      follow: true,
+    },
+    openGraph: {
+      title: `タグ一覧・エロ動画 | ${SITE.name}`,
+      description: "タグ一覧。エロ動画・作品の話題タグを無料でチェック。",
+      type: "website",
+      images: previewImage ? [{ url: previewImage }] : undefined,
+    },
+  };
+}
 
 export default async function TagsPage({
   searchParams,
@@ -62,15 +92,32 @@ export default async function TagsPage({
   const pagination = buildPagination(safePage, totalPages);
 
   const base = SITE.url.replace(/\/$/, "");
+  const topTag = (await getTopTags(1))[0]?.tag ?? null;
+  const previewResult = topTag
+    ? await getWorksByMetaTagPageLite(topTag, 1, 1)
+    : { items: [] };
+  const previewImage =
+    previewResult.items[0]?.images?.[0]?.url &&
+    !isLikelyInvalidImageUrl(previewResult.items[0].images[0].url)
+      ? previewResult.items[0].images[0].url
+      : undefined;
   const structuredData = {
     "@context": "https://schema.org",
+    "@id": `${base}/tags#collection`,
     "@type": "CollectionPage",
     name: "タグ一覧・エロ動画",
     url: `${base}/tags`,
     description: "サイト内で利用しているタグ一覧。エロ動画・作品の話題タグを無料でチェック。",
+    primaryImageOfPage: previewImage
+      ? {
+          "@type": "ImageObject",
+          url: previewImage,
+        }
+      : undefined,
   };
   const listLd = {
     "@context": "https://schema.org",
+    "@id": `${base}/tags#itemlist`,
     "@type": "ItemList",
     name: "人気タグ",
     itemListElement: pageItems.slice(0, 12).map((tag, index) => ({

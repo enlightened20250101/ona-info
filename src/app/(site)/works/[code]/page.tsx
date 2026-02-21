@@ -11,6 +11,7 @@ import {
   getArticleBySlug,
   getLatestByTypePageLite,
   getLatestByTypePageBeforeLite,
+  getWorksByMetaTagPageLite,
   getWorksByGenreLite,
 } from "@/lib/db";
 import { SITE } from "@/lib/site";
@@ -109,9 +110,15 @@ export async function generateMetadata({
     };
   }
 
+  const actressLabel = article.related_actresses[0] ?? "";
+  const makerLabel = article.meta_makers?.[0] ?? "";
+  const genreLabel = article.meta_genres?.[0] ?? "";
+  const suffixParts = [actressLabel, makerLabel, genreLabel].filter(Boolean);
+  const suffix = suffixParts.length > 0 ? `｜${suffixParts.join("・")}` : "";
+
   return {
-    title: `${article.title} (${article.slug}) | エロ動画・動画 | ${SITE.name}`,
-    description: `${article.title}のエロ動画・動画情報を無料でチェック。${article.summary}`,
+    title: `${article.title} (${article.slug})${suffix} | ${SITE.name}`,
+    description: `${article.title} (${article.slug})の動画情報を無料でチェック。${article.summary}`,
     robots: {
       index: true,
       follow: true,
@@ -149,16 +156,39 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
   const metaTags = buildMetaTagsFromWork(article);
   const tags = [...baseTags, ...metaTags];
   const keywordPool = tags.flatMap(tagKeywords);
+  const keywords = Array.from(new Set(tags)).slice(0, 12);
+  const actors = article.related_actresses.map((name) => ({
+    "@type": "Person",
+    name,
+  }));
+  const genres = (article.meta_genres ?? []).filter(Boolean);
+  const makers = (article.meta_makers ?? []).filter(Boolean);
+  const hasShortBody = article.body.trim().length < 120;
   const base = SITE.url.replace(/\/$/, "");
   const structuredData = {
     "@context": "https://schema.org",
+    "@id": `${base}/works/${article.slug}#article`,
     "@type": "Article",
     headline: article.title,
     description: article.summary,
     datePublished: article.published_at,
     dateModified: article.fetched_at,
-    mainEntityOfPage: `${SITE.url.replace(/\/$/, "")}/works/${article.slug}`,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${base}/works/${article.slug}`,
+    },
+    isPartOf: {
+      "@type": "CollectionPage",
+      "@id": `${base}/works#collection`,
+      name: "エロ動画・作品一覧",
+      url: `${base}/works`,
+    },
     image: article.images?.[0]?.url ? [article.images[0].url] : undefined,
+    keywords: keywords.length > 0 ? keywords.join(", ") : undefined,
+    genre: genres.length > 0 ? genres : undefined,
+    actor: actors.length > 0 ? actors : undefined,
+    isAccessibleForFree: true,
+    inLanguage: "ja-JP",
     author: {
       "@type": "Organization",
       name: SITE.name,
@@ -166,11 +196,18 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
     publisher: {
       "@type": "Organization",
       name: SITE.name,
+      url: SITE.url.replace(/\/$/, ""),
     },
+    primaryImageOfPage: article.images?.[0]?.url
+      ? {
+          "@type": "ImageObject",
+          url: article.images[0].url,
+        }
+      : undefined,
   };
-  const keywords = Array.from(new Set(tags)).slice(0, 12);
   const faqLd = {
     "@context": "https://schema.org",
+    "@id": `${base}/works/${article.slug}#faq`,
     "@type": "FAQPage",
     mainEntity: [
       {
@@ -203,6 +240,7 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
   };
   const videoLd = {
     "@context": "https://schema.org",
+    "@id": `${base}/works/${article.slug}#video`,
     "@type": "VideoObject",
     name: article.title,
     description: article.summary,
@@ -214,7 +252,11 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
       "@type": "Organization",
       name: SITE.name,
     },
-    keywords: keywords.join(", "),
+    keywords: keywords.length > 0 ? keywords.join(", ") : undefined,
+    genre: genres.length > 0 ? genres : undefined,
+    actor: actors.length > 0 ? actors : undefined,
+    isAccessibleForFree: true,
+    inLanguage: "ja-JP",
     mainEntityOfPage: `${base}/works/${article.slug}`,
   };
 
@@ -290,14 +332,14 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
                 article.images
                   .filter((image) => !isLikelyInvalidImageUrl(image.url))
                   .map((image) => (
-                    <div key={image.url} className="relative h-48 w-full">
-                      <SafeImage
-                        src={image.url}
-                        alt={image.alt}
-                        fill
-                        sizes="(min-width: 768px) 50vw, 100vw"
-                        unoptimized={shouldBypassNextImage(image.url)}
-                        className="rounded-2xl object-cover"
+                  <div key={image.url} className="relative h-48 w-full">
+                    <SafeImage
+                      src={image.url}
+                      alt={`${article.title} ${article.slug} 画像`}
+                      fill
+                      sizes="(min-width: 768px) 50vw, 100vw"
+                      unoptimized={shouldBypassNextImage(image.url)}
+                      className="rounded-2xl object-cover"
                         fallback={
                           <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-accent-soft text-xs text-accent">
                             No Image
@@ -316,9 +358,39 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
           <div className="rounded-3xl border border-border bg-card p-6 md:sticky md:top-24 md:self-start">
             <h2 className="text-lg font-semibold">概要</h2>
             <p className="mt-3 text-sm text-muted">{article.summary}</p>
+            <div className="mt-4 rounded-2xl border border-border bg-white p-4 text-sm text-muted">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+                作品情報
+              </p>
+              <ul className="mt-2 space-y-1">
+                <li>作品番号: {article.slug}</li>
+                <li>配信日: {formatDate(article.published_at)}</li>
+                <li>
+                  メーカー: {makers.length > 0 ? makers.join(" / ") : "情報準備中"}
+                </li>
+                <li>ジャンル: {genres.length > 0 ? genres.join(" / ") : "情報準備中"}</li>
+                <li>
+                  出演女優:{" "}
+                  {article.related_actresses.length > 0
+                    ? article.related_actresses.join(" / ")
+                    : "情報準備中"}
+                </li>
+              </ul>
+            </div>
             <div className="mt-4 whitespace-pre-wrap text-sm">
               {highlightKeywords(article.body, keywordPool)}
             </div>
+            {hasShortBody ? (
+              <div className="mt-4 rounded-2xl border border-border bg-white p-4 text-sm text-muted">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+                  作品の見どころ
+                </p>
+                <p className="mt-2">
+                  {article.title}の魅力や見どころを中心に、出演女優やジャンルの特徴をまとめて
+                  確認できます。配信日や作品番号から関連作品を辿るのもおすすめです。
+                </p>
+              </div>
+            ) : null}
             {(article.related_actresses.length > 0 || metaTags.length > 0) ? (
               <div className="mt-4 rounded-2xl border border-border bg-white p-4 text-sm text-muted">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
@@ -495,12 +567,14 @@ async function RelatedSections({
   const now = getJstNow();
   const fallbackCover = article.images?.[0]?.url ?? null;
   const sameGenre = article.meta_genres?.[0] ?? null;
-  const [relatedByActress, latestTopicsResult, latestWorksResult, sameGenreResult] =
+  const sameMaker = article.meta_makers?.[0] ?? null;
+  const [relatedByActress, latestTopicsResult, latestWorksResult, sameGenreResult, sameMakerResult] =
     await Promise.all([
       leadActress ? findWorksByActressSlug(leadActress, 12) : Promise.resolve([]),
       getLatestByTypePageLite("topic", 1, 40),
       getLatestByTypePageBeforeLite("work", now.toISOString(), 1, 120),
       sameGenre ? getWorksByGenreLite(sameGenre, 18) : Promise.resolve([]),
+      sameMaker ? getWorksByMetaTagPageLite(`maker:${sameMaker}`, 1, 18) : Promise.resolve(null),
     ]);
 
   const related = leadActress
@@ -535,6 +609,16 @@ async function RelatedSections({
         `genre-${article.slug}`
       )
     : [];
+  const sameMakerWorks =
+    sameMaker && sameMakerResult
+      ? pickDailyRandom(
+          sameMakerResult.items
+            .filter((work) => work.slug !== article.slug)
+            .filter((work) => isReleased(work.published_at, now)),
+          6,
+          `maker-${article.slug}`
+        )
+      : [];
   const seedTags = Array.from(
     new Set(
       [
@@ -568,6 +652,7 @@ async function RelatedSections({
       (work) =>
         work.slug !== article.slug &&
         !sameGenreWorks.some((picked) => picked.slug === work.slug) &&
+        !sameMakerWorks.some((picked) => picked.slug === work.slug) &&
         !similarWorks.some((picked) => picked.slug === work.slug)
     ),
     6,
@@ -613,9 +698,9 @@ async function RelatedSections({
                 >
                   <div className="relative h-28 overflow-hidden bg-accent-soft">
                     {cover ? (
-                      <SafeImage
-                        src={cover}
-                        alt={slug}
+                    <SafeImage
+                      src={cover}
+                      alt={`${slug} 出演作品`}
                         fill
                         sizes="(min-width: 640px) 50vw, 100vw"
                         unoptimized={shouldBypassNextImage(cover)}
@@ -657,7 +742,49 @@ async function RelatedSections({
                   <div className="relative h-32 w-full">
                     <SafeImage
                       src={work.images[0].url}
-                      alt={work.images[0].alt}
+                      alt={`${work.title} ${work.slug} サムネイル`}
+                      fill
+                      sizes="(min-width: 640px) 50vw, 100vw"
+                      unoptimized={shouldBypassNextImage(work.images[0].url)}
+                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      fallback={
+                        <div className="absolute inset-0 flex items-center justify-center bg-accent-soft text-xs text-accent">
+                          No Image
+                        </div>
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-32 items-center justify-center bg-accent-soft text-xs text-accent">
+                    No Image
+                  </div>
+                )}
+                <div className="p-4">
+                  <p className="text-xs text-muted">{work.slug}</p>
+                  <p className="mt-1 text-sm font-semibold line-clamp-2">{work.title}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {sameMakerWorks.length > 0 ? (
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold">同メーカーの作品</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {sameMakerWorks.map((work) => (
+              <Link
+                key={work.id}
+                href={`/works/${work.slug}`}
+                className="group overflow-hidden rounded-2xl border border-border bg-white transition hover:-translate-y-1 hover:border-accent/40"
+              >
+                {work.images?.[0]?.url &&
+                !isLikelyInvalidImageUrl(work.images[0].url) ? (
+                  <div className="relative h-32 w-full">
+                    <SafeImage
+                      src={work.images[0].url}
+                      alt={`${work.title} ${work.slug} サムネイル`}
                       fill
                       sizes="(min-width: 640px) 50vw, 100vw"
                       unoptimized={shouldBypassNextImage(work.images[0].url)}
@@ -699,7 +826,7 @@ async function RelatedSections({
                   <div className="relative h-32 w-full">
                     <SafeImage
                       src={work.images[0].url}
-                      alt={work.images[0].alt}
+                      alt={`${work.title} ${work.slug} サムネイル`}
                       fill
                       sizes="(min-width: 640px) 50vw, 100vw"
                       unoptimized={shouldBypassNextImage(work.images[0].url)}
@@ -741,7 +868,7 @@ async function RelatedSections({
                   <div className="relative h-32 w-full">
                     <SafeImage
                       src={work.images[0].url}
-                      alt={work.images[0].alt}
+                      alt={`${work.title} ${work.slug} サムネイル`}
                       fill
                       sizes="(min-width: 640px) 50vw, 100vw"
                       unoptimized={shouldBypassNextImage(work.images[0].url)}

@@ -6,22 +6,59 @@ import { buildPagination } from "@/lib/pagination";
 import { getActressCovers, getActressStats, getLatestByType } from "@/lib/db";
 import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
 import { SITE } from "@/lib/site";
-import { shouldBypassNextImage } from "@/lib/image";
+import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: `女優一覧・エロ動画 | ${SITE.name}`,
-  description: "出演女優の一覧。女優名からエロ動画・出演作品を無料でチェック。",
-  alternates: {
-    canonical: `${SITE.url.replace(/\/$/, "")}/actresses`,
-  },
-  openGraph: {
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const query = (sp.q ?? "").trim().toLowerCase();
+  const works = await getLatestByType("work", 200);
+  const coverPoolSingle = buildActressCoverPool(works, { singleOnly: true });
+  const coverPoolAll = buildActressCoverPool(works);
+  const stats = await getActressStats(10000);
+  const actresses = stats.map((row) => row.actress);
+  const filtered = query
+    ? actresses.filter((slug) => slug.toLowerCase().includes(query))
+    : actresses;
+  const topSlug = filtered[0] ?? null;
+  const coverMap = topSlug ? await getActressCovers([topSlug]) : new Map();
+  const previewImage =
+    topSlug
+      ? pickDailyRandomCover(
+          topSlug,
+          coverPoolSingle,
+          null,
+          "actresses-og-single"
+        ) ??
+        pickDailyRandomCover(topSlug, coverPoolAll, coverMap.get(topSlug) ?? null, "actresses-og")
+      : null;
+  const previewUrl =
+    previewImage && !isLikelyInvalidImageUrl(previewImage) ? previewImage : undefined;
+  const noindex = filtered.length === 0;
+
+  return {
     title: `女優一覧・エロ動画 | ${SITE.name}`,
     description: "出演女優の一覧。女優名からエロ動画・出演作品を無料でチェック。",
-    type: "website",
-  },
-};
+    alternates: {
+      canonical: `${SITE.url.replace(/\/$/, "")}/actresses`,
+    },
+    robots: {
+      index: !noindex,
+      follow: true,
+    },
+    openGraph: {
+      title: `女優一覧・エロ動画 | ${SITE.name}`,
+      description: "出演女優の一覧。女優名からエロ動画・出演作品を無料でチェック。",
+      type: "website",
+      images: previewUrl ? [{ url: previewUrl }] : undefined,
+    },
+  };
+}
 
 export default async function ActressesPage({
   searchParams,
@@ -47,15 +84,9 @@ export default async function ActressesPage({
   const pagination = buildPagination(safePage, totalPages);
 
   const base = SITE.url.replace(/\/$/, "");
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: "女優一覧・エロ動画",
-    url: `${base}/actresses`,
-    description: "出演女優の一覧。女優名からエロ動画・出演作品を無料でチェック。",
-  };
   const listLd = {
     "@context": "https://schema.org",
+    "@id": `${base}/actresses#itemlist`,
     "@type": "ItemList",
     name: "人気の女優",
     itemListElement: pageItems.slice(0, 12).map((name, index) => ({
@@ -99,6 +130,37 @@ export default async function ActressesPage({
   const coverMap = await getActressCovers(pageItems);
   const worksByActressSingle = buildActressCoverPool(works, { singleOnly: true });
   const worksByActressAll = buildActressCoverPool(works);
+  const primaryImage =
+    pageItems[0] && coverMap.size > 0
+      ? pickDailyRandomCover(
+          pageItems[0],
+          worksByActressSingle,
+          null,
+          "actresses-primary-single"
+        ) ??
+        pickDailyRandomCover(
+          pageItems[0],
+          worksByActressAll,
+          coverMap.get(pageItems[0]) ?? null,
+          "actresses-primary"
+        )
+      : null;
+  const primaryUrl =
+    primaryImage && !isLikelyInvalidImageUrl(primaryImage) ? primaryImage : undefined;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@id": `${base}/actresses#collection`,
+    "@type": "CollectionPage",
+    name: "女優一覧・エロ動画",
+    url: `${base}/actresses`,
+    description: "出演女優の一覧。女優名からエロ動画・出演作品を無料でチェック。",
+    primaryImageOfPage: primaryUrl
+      ? {
+          "@type": "ImageObject",
+          url: primaryUrl,
+        }
+      : undefined,
+  };
 
   return (
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
@@ -175,7 +237,7 @@ export default async function ActressesPage({
                       {cover ? (
                         <SafeImage
                           src={cover}
-                          alt={slug}
+                          alt={`${slug} 出演作品`}
                           fill
                           sizes="(min-width: 640px) 50vw, 100vw"
                           unoptimized={shouldBypassNextImage(cover)}
