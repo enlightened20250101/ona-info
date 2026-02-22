@@ -228,7 +228,7 @@ async function ingestFanzaWorks(options: FanzaIngestOptions = {}) {
     targetNew,
     offsetStart: options.offsetStart,
     maxPages: options.maxPages,
-    stopWhenTargetReached: options.stopWhenTargetReached,
+    stopWhenTargetReached: false,
     sort: options.sort,
   });
   const total = raws.length;

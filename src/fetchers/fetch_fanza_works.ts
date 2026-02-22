@@ -158,6 +158,10 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
     const fallbackThumbs: string[] = [];
     if (normalizedContentId) {
       const baseAws = `https://awsimgsrc.dmm.co.jp/pics_dig/digital/video/${normalizedContentId}/${normalizedContentId}`;
+      const jpMax = Math.max(1, Math.min(20, Number(getEnv("DMM_JP_IMAGE_MAX", "10"))));
+      for (let i = 1; i <= jpMax; i += 1) {
+        inferred.push(`${baseAws}jp-${i}.jpg`);
+      }
       const heavyThumb = `${baseAws}pl.jpg`;
       inferred.push(heavyThumb);
     }
@@ -169,12 +173,16 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
       apiOther[0] ||
       apiImages[0] ||
       "";
-    const extraSources = [...apiLarge, ...apiSample, ...apiOther].filter(
+    const extraSources = [...inferred.slice(1), ...apiLarge, ...apiSample, ...apiOther].filter(
       (url) => url && url !== primary
     ) as string[];
-    const uniqueImages = Array.from(new Set([primary, ...extraSources])).filter(
+    const prefersAws = (url: string) => /awsimgsrc\.dmm\.co\.jp/i.test(url);
+    const lowResHost = (url: string) => /pics\.dmm\.co\.jp/i.test(url);
+    const rawUnique = Array.from(new Set([primary, ...extraSources])).filter(
       (url) => url && !nowPrintingPattern.test(String(url))
     ) as string[];
+    const hasAws = rawUnique.some((url) => prefersAws(url));
+    const uniqueImages = hasAws ? rawUnique.filter((url) => !lowResHost(url)) : rawUnique;
     if (uniqueImages.length === 0) {
       continue;
     }

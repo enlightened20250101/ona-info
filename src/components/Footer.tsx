@@ -53,6 +53,14 @@ export default function Footer() {
               FANZA Webサービス
             </a>
           </span>
+          <a
+            href="https://ero-tarest.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            動画エロタレスト
+          </a>
           <span>© {new Date().getFullYear()} {SITE.name}</span>
         </div>
       </div>
