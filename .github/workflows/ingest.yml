@@ -2,7 +2,7 @@ name: ingest
 
 on:
   schedule:
-    - cron: "15 23 * * *" # JST 8:15
+    - cron: "5 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -43,3 +43,6 @@ jobs:
           SUMMARY_WEEKLY_KEY: "2026-02-09"
           SUMMARY_MONTHLY_KEY: "2026-02"
           SITE_URL: ${{ secrets.SITE_URL }}
+          GSHEETS_SPREADSHEET_ID: ${{ secrets.GSHEETS_SPREADSHEET_ID }}
+          GSHEETS_TOKYOMOTION_SHEET_NAME: ${{ secrets.GSHEETS_TOKYOMOTION_SHEET_NAME }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
