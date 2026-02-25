@@ -136,7 +136,11 @@ export async function fetchTokyoMotionRss(
       const summary =
         summaryText.length > 0
           ? summaryText
-          : [title, duration ? `Duration: ${duration}` : "", tags.length ? tags.join(" / ") : ""]
+          : [
+              title,
+              duration ? `再生時間: ${duration}` : "",
+              tags.length ? `タグ: ${tags.join(" / ")}` : "",
+            ]
               .filter(Boolean)
               .join(" | ");
 
@@ -147,10 +151,10 @@ export async function fetchTokyoMotionRss(
         thumb_url: thumb,
         duration,
         tags,
-        summary,
-        published_at: pubDate ? new Date(pubDate).toISOString() : null,
-        fetched_at: fetchedAt,
-      } satisfies RawTokyoMotionVideo;
+      summary,
+      published_at: pubDate ? new Date(pubDate).toISOString() : null,
+      fetched_at: fetchedAt,
+    } satisfies RawTokyoMotionVideo;
     })
     .filter(Boolean) as RawTokyoMotionVideo[];
 }

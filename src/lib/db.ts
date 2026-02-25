@@ -96,6 +96,7 @@ type Database = {
           duration: string | null;
           tags: Json;
           summary: string | null;
+          approval_status: string | null;
           published_at: string | null;
           fetched_at: string;
         };
@@ -107,6 +108,7 @@ type Database = {
           duration?: string | null;
           tags?: Json;
           summary?: string | null;
+          approval_status?: string | null;
           published_at?: string | null;
           fetched_at?: string;
         };
@@ -118,6 +120,7 @@ type Database = {
           duration?: string | null;
           tags?: Json;
           summary?: string | null;
+          approval_status?: string | null;
           published_at?: string | null;
           fetched_at?: string;
         };
@@ -391,6 +394,7 @@ export async function getLatestArticles(limit = 30) {
     client
       .from("tokyomotion_videos")
       .select("*")
+      .eq("approval_status", "approved")
       .order("published_at", { ascending: false })
       .limit(limit),
   ]);
@@ -424,6 +428,7 @@ export async function getLatestArticlesLite(limit = 30) {
     client
       .from("tokyomotion_videos")
       .select("*")
+      .eq("approval_status", "approved")
       .order("published_at", { ascending: false })
       .limit(limit),
   ]);
@@ -457,6 +462,7 @@ export async function getLatestArticlesForSitemap(limit = 5000) {
     client
       .from("tokyomotion_videos")
       .select("id,published_at")
+      .eq("approval_status", "approved")
       .order("published_at", { ascending: false })
       .limit(limit),
   ]);
@@ -481,7 +487,10 @@ export async function getArticlesCount() {
   const client = getSupabase();
   const [articleCount, tokyoCount] = await Promise.all([
     client.from("articles").select("id", { count: "exact", head: true }),
-    client.from("tokyomotion_videos").select("id", { count: "exact", head: true }),
+    client
+      .from("tokyomotion_videos")
+      .select("id", { count: "exact", head: true })
+      .eq("approval_status", "approved"),
   ]);
   if (articleCount.error) throw articleCount.error;
   if (tokyoCount.error) throw tokyoCount.error;
@@ -494,6 +503,7 @@ export async function getLatestByType(type: ArticleType, limit = 10) {
     const { data, error } = await client
       .from("tokyomotion_videos")
       .select("*")
+      .eq("approval_status", "approved")
       .order("published_at", { ascending: false })
       .limit(limit);
     if (error) {
@@ -525,6 +535,7 @@ export async function getLatestByTypeLite(
     const { data, error } = await client
       .from("tokyomotion_videos")
       .select("*")
+      .eq("approval_status", "approved")
       .order("published_at", { ascending: false })
       .limit(limit);
     if (error) {
@@ -563,6 +574,7 @@ export async function getLatestWorkFeedLite(
     client
       .from("tokyomotion_videos")
       .select("*")
+      .eq("approval_status", "approved")
       .order("published_at", { ascending: false })
       .limit(limit),
   ]);
@@ -902,7 +914,10 @@ export async function searchArticlesPageLite(options: {
   const includeTokyo = !options.type || options.type === "work" || options.type === "tokyomotion";
 
   if (options.type === "tokyomotion") {
-    let tokyoFallback = client.from("tokyomotion_videos").select("*", { count: "exact" });
+    let tokyoFallback = client
+      .from("tokyomotion_videos")
+      .select("*", { count: "exact" })
+      .eq("approval_status", "approved");
     tokyoFallback = applyBefore(tokyoFallback as never);
     tokyoFallback = applyOrdering(tokyoFallback as never);
     const { data, error, count } = await tokyoFallback.range(from, to);
@@ -931,7 +946,10 @@ export async function searchArticlesPageLite(options: {
     }
 
     const take = to + 1;
-    let tokyoFallback = client.from("tokyomotion_videos").select("*", { count: "exact" });
+    let tokyoFallback = client
+      .from("tokyomotion_videos")
+      .select("*", { count: "exact" })
+      .eq("approval_status", "approved");
     tokyoFallback = applyBefore(tokyoFallback as never);
     tokyoFallback = applyOrdering(tokyoFallback as never);
     const tokyoResult = await tokyoFallback.range(0, take - 1);
@@ -981,6 +999,7 @@ export async function searchArticlesPageLite(options: {
   let tokyoBuilder = client
     .from("tokyomotion_videos")
     .select("*", { count: "exact" })
+    .eq("approval_status", "approved")
     .or([`title.ilike.${tokyoLikeQuery}`, `summary.ilike.${tokyoLikeQuery}`].join(","));
   tokyoBuilder = applyBefore(tokyoBuilder as never);
   tokyoBuilder = applyOrdering(tokyoBuilder as never);
@@ -1075,6 +1094,7 @@ export async function getLatestWorkFeedPageBeforeLite(
     client
       .from("tokyomotion_videos")
       .select("*", { count: "exact" })
+      .eq("approval_status", "approved")
       .lte("published_at", beforeIso)
       .order("published_at", { ascending: false })
       .range(0, take - 1),
@@ -1187,6 +1207,7 @@ export async function getArticleBySlug(slug: string) {
       .from("tokyomotion_videos")
       .select("*")
       .eq("id", id)
+      .eq("approval_status", "approved")
       .maybeSingle();
     if (tokyoError) {
       throw tokyoError;

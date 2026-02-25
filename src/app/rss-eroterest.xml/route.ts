@@ -19,8 +19,7 @@ export async function GET() {
   const now = new Date().toISOString();
   const base = SITE.url.replace(/\/$/, "");
 
-  const xmlItems = items
-    .map((item) => {
+  const xmlItems = items.map((item) => {
       const url = `${base}/works/${item.slug}`;
       const title = escapeXml(item.title);
       const descriptionText = cleanSummary(item.summary);
