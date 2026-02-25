@@ -3,6 +3,8 @@ import fs from "fs";
 import path from "path";
 import { google } from "googleapis";
 import { fetchFanzaWorks } from "@/fetchers/fetch_fanza_works";
+import { fetchTokyoMotionRss } from "@/fetchers/fetch_tokyomotion_rss";
+import { fetchTokyoMotionPage } from "@/fetchers/fetch_tokyomotion_page";
 import { fetchRankings } from "@/fetchers/fetch_rankings";
 import { fetchSummaries } from "@/fetchers/fetch_summaries";
 import { normalizeFanzaWork } from "@/normalizers/normalize_work";
@@ -14,6 +16,7 @@ import {
   getLatestByType,
   getWorkSlugs,
   insertArticleIfNew,
+  insertTokyoMotionIfNew,
   refreshActressStats,
   refreshSiteStats,
   upsertArticle,
@@ -401,6 +404,141 @@ async function ingestGsheetEmbeds() {
   return { inserted, skipped, fetched: records.length };
 }
 
+async function ingestTokyoMotionRss(options: { targetNew?: number; maxPages?: number; pageStart?: number; stopWhenTargetReached?: boolean } = {}) {
+  const targetNew = options.targetNew ?? Number(process.env.TOKYOMOTION_TARGET_NEW ?? "30");
+  const maxPages = options.maxPages ?? Number(process.env.TOKYOMOTION_MAX_PAGES ?? "5");
+  const pageStart = Math.max(1, options.pageStart ?? Number(process.env.TOKYOMOTION_PAGE_START ?? "1"));
+  const stopWhenTargetReached = options.stopWhenTargetReached ?? true;
+  let inserted = 0;
+  let skipped = 0;
+  let fetched = 0;
+
+  let previousFirstId: string | null = null;
+  for (let page = pageStart; page < pageStart + maxPages; page += 1) {
+    const raws = await fetchTokyoMotionRss({ page });
+    fetched += raws.length;
+    const firstId = raws[0]?.id ?? null;
+    if (page > pageStart && firstId && previousFirstId === firstId) {
+      logLine(`TokyoMotion RSS paging looks fixed; stopping at page ${page}.`);
+      break;
+    }
+    previousFirstId = firstId;
+    for (const raw of raws) {
+      const result = await insertTokyoMotionIfNew({
+        id: raw.id,
+        title: raw.title,
+        url: raw.url,
+        thumb_url: raw.thumb_url,
+        duration: raw.duration,
+        tags: raw.tags,
+        summary: raw.summary,
+        published_at: raw.published_at,
+        fetched_at: raw.fetched_at,
+      });
+      if (result.status === "inserted") {
+        inserted += 1;
+        logLine(`TokyoMotion ${raw.id}: inserted`);
+        if (stopWhenTargetReached && inserted >= targetNew) {
+          return { inserted, skipped, fetched };
+        }
+      } else {
+        skipped += 1;
+      }
+    }
+  }
+
+  return { inserted, skipped, fetched };
+}
+
+async function ingestTokyoMotionSheet() {
+  const spreadsheetId = process.env.GSHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) {
+    logLine("TokyoMotion sheet skipped: missing GSHEETS_SPREADSHEET_ID");
+    return { inserted: 0, skipped: 0, fetched: 0 };
+  }
+
+  const sheetName = process.env.GSHEETS_TOKYOMOTION_SHEET_NAME || "tokyomotion";
+  const serviceAccount = readServiceAccount();
+  if (!serviceAccount) {
+    logLine("TokyoMotion sheet skipped: missing service account credentials");
+    return { inserted: 0, skipped: 0, fetched: 0 };
+  }
+
+  const auth = new google.auth.JWT({
+    email: serviceAccount.client_email,
+    key: serviceAccount.private_key,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+  });
+
+  const sheets = google.sheets({ version: "v4", auth });
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${sheetName}!A1:Z`,
+  });
+
+  const rows = response.data.values ?? [];
+  if (rows.length <= 1) {
+    return { inserted: 0, skipped: 0, fetched: 0 };
+  }
+
+  const headers = rows[0].map((header) => String(header).trim().toLowerCase());
+  const urlIndex = headers.indexOf("url");
+
+  let inserted = 0;
+  let skipped = 0;
+  let fetched = 0;
+
+  for (const row of rows.slice(1)) {
+    const url = urlIndex >= 0 ? String(row[urlIndex] ?? "").trim() : String(row[0] ?? "").trim();
+    if (!url) {
+      skipped += 1;
+      continue;
+    }
+
+    fetched += 1;
+    const record: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      record[header] = row[index] ? String(row[index]) : "";
+    });
+
+    const scraped = await fetchTokyoMotionPage(url);
+    if (!scraped) {
+      skipped += 1;
+      continue;
+    }
+
+    const title = record.title?.trim() || scraped.title;
+    const thumbUrl = record.thumb_url?.trim() || scraped.thumb_url || null;
+    const duration = record.duration?.trim() || scraped.duration || null;
+    const tags = record.tags
+      ? record.tags.split(/[,\s/]+/).map((t) => t.trim()).filter(Boolean)
+      : scraped.tags;
+    const summary = record.summary?.trim() || scraped.summary;
+    const publishedAt = record.published_at?.trim() || scraped.published_at || null;
+
+    const result = await insertTokyoMotionIfNew({
+      id: scraped.id,
+      title,
+      url,
+      thumb_url: thumbUrl,
+      duration,
+      tags,
+      summary,
+      published_at: publishedAt,
+      fetched_at: scraped.fetched_at,
+    });
+
+    if (result.status === "inserted") {
+      inserted += 1;
+      logLine(`TokyoMotion sheet ${scraped.id}: inserted`);
+    } else {
+      skipped += 1;
+    }
+  }
+
+  return { inserted, skipped, fetched };
+}
+
 async function sendNotification(message: string) {
   const url = process.env.NOTIFY_WEBHOOK_URL;
   if (!url) return;
@@ -467,6 +605,16 @@ async function run() {
     logLine(`Archive mode: offset=${offsetStart} pages=${maxPages} target=${targetNew}`);
     const tasks = [
       {
+        name: "tokyomotion",
+        run: () =>
+          ingestTokyoMotionRss({
+            pageStart: Number(process.env.TOKYOMOTION_ARCHIVE_PAGE_START ?? "1"),
+            maxPages: Number(process.env.TOKYOMOTION_ARCHIVE_PAGES ?? "5"),
+            targetNew: Number(process.env.TOKYOMOTION_ARCHIVE_TARGET ?? "30"),
+            stopWhenTargetReached: false,
+          }),
+      },
+      {
         name: "fanza",
         run: () =>
           ingestFanzaWorks({
@@ -518,6 +666,8 @@ async function run() {
   }
 
   const tasks = [
+    { name: "tokyomotion", run: ingestTokyoMotionRss },
+    { name: "tokyomotion_sheet", run: ingestTokyoMotionSheet },
     { name: "gsheet", run: ingestGsheetEmbeds },
     { name: "summaries", run: ingestSummaries },
     { name: "rankings", run: ingestRankings },

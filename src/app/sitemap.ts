@@ -34,7 +34,7 @@ export default async function sitemap({ id }: { id: number }): Promise<MetadataR
   const pageItems = articles.slice(start, start + SITEMAP_PAGE_SIZE);
 
   const dynamicRoutes = pageItems.map((article) => {
-    const isWork = article.type === "work";
+    const isWork = article.type === "work" || article.type === "tokyomotion";
     const isActress = article.type === "actress";
     const prefix = isWork ? "works" : isActress ? "actresses" : "topics";
     return {

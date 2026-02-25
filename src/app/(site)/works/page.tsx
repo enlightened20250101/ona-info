@@ -3,7 +3,7 @@ import SafeImage from "@/components/SafeImage";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
-import { getLatestByTypePageBeforeLite, searchArticlesPage } from "@/lib/db";
+import { getLatestWorkFeedPageBeforeLite, searchArticlesPageLite } from "@/lib/db";
 import { SITE } from "@/lib/site";
 import { getJstNow } from "@/lib/releaseDate";
 import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
@@ -22,8 +22,8 @@ export async function generateMetadata({
   const now = getJstNow();
   const beforeIso = now.toISOString();
   const result = query
-    ? await searchArticlesPage({ query, type: "work", page, perPage, beforeIso })
-    : await getLatestByTypePageBeforeLite("work", beforeIso, page, perPage);
+    ? await searchArticlesPageLite({ query, type: "work", page, perPage, beforeIso })
+    : await getLatestWorkFeedPageBeforeLite(beforeIso, page, perPage);
   const previewImage =
     result.items[0]?.images?.[0]?.url &&
     !isLikelyInvalidImageUrl(result.items[0].images[0].url)
@@ -62,8 +62,8 @@ export default async function WorksPage({
   const now = getJstNow();
   const beforeIso = now.toISOString();
   const result = query
-    ? await searchArticlesPage({ query, type: "work", page, perPage, beforeIso })
-    : await getLatestByTypePageBeforeLite("work", beforeIso, page, perPage);
+    ? await searchArticlesPageLite({ query, type: "work", page, perPage, beforeIso })
+    : await getLatestWorkFeedPageBeforeLite(beforeIso, page, perPage);
   const filtered = result.items;
   const totalPages = Math.max(1, Math.ceil(result.total / perPage));
   const safePage = Math.min(page, totalPages);

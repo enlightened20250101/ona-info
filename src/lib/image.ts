@@ -4,6 +4,7 @@ const BYPASS_IMAGE_HOSTS = new Set([
   "pics.dmm.com",
   "img.dmm.co.jp",
   "image.mgstage.com",
+  "cdn.tokyo-motion.net",
 ]);
 
 export function shouldBypassNextImage(src?: string | null) {

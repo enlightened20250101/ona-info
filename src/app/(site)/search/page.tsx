@@ -346,11 +346,21 @@ export default async function SearchPage({
           {query && total > 0 ? (
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {pageItems.map((article) => {
-                const cover = article.type === "work" ? article.images?.[0]?.url : null;
+                const cover =
+                  article.type === "work" || article.type === "tokyomotion"
+                    ? article.images?.[0]?.url
+                    : null;
+                const displayType = article.type === "tokyomotion" ? "work" : article.type;
+                const hrefPrefix =
+                  article.type === "work" || article.type === "tokyomotion"
+                    ? "works"
+                    : article.type === "actress"
+                      ? "actresses"
+                      : "topics";
                 return (
                   <Link
                     key={article.id}
-                    href={`/${article.type === "work" ? "works" : article.type === "actress" ? "actresses" : "topics"}/${article.slug}`}
+                    href={`/${hrefPrefix}/${article.slug}`}
                     className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:border-accent/40"
                   >
                     <div className="relative h-36 overflow-hidden bg-accent-soft">
@@ -377,7 +387,7 @@ export default async function SearchPage({
                     <div className="p-4">
                       <div className="flex items-center gap-3">
                         <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
-                          {article.type}
+                          {displayType}
                         </span>
                         <span className="text-xs text-muted">{highlight(article.slug, query)}</span>
                       </div>

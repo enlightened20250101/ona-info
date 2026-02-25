@@ -1,4 +1,4 @@
-export type ArticleType = "work" | "actress" | "topic";
+export type ArticleType = "work" | "actress" | "topic" | "tokyomotion";
 
 export type ArticleImage = {
   url: string;

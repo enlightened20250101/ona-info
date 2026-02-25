@@ -161,8 +161,19 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
     "@type": "Person",
     name,
   }));
+  const viewLabel = article.type === "tokyomotion" ? "TokyoMotionで見る" : "FANZAで見る";
+  const isTokyoMotion = article.type === "tokyomotion";
+  const genreLabel = isTokyoMotion ? "タグ" : "ジャンル";
+  const summaryText = isTokyoMotion
+    ? article.summary.replace(/&nbsp;|&#160;/gi, " ").replace(/\s+/g, " ").trim()
+    : article.summary;
+  const durationMatch = isTokyoMotion ? summaryText.match(/再生時間:\s*([0-9:]+)/i) : null;
+  const durationText = durationMatch?.[1] ?? "";
   const genres = (article.meta_genres ?? []).filter(Boolean);
   const makers = (article.meta_makers ?? []).filter(Boolean);
+  const hasMakers = makers.length > 0;
+  const hasGenres = genres.length > 0;
+  const hasActresses = article.related_actresses.length > 0;
   const hasShortBody = article.body.trim().length < 120;
   const base = SITE.url.replace(/\/$/, "");
   const structuredData = {
@@ -306,7 +317,7 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
             fallbackUrl={article.affiliate_url}
             fallbackImage={article.images[0]?.url}
             fallbackAlt={article.title}
-            fallbackLabel="FANZAで見る"
+            fallbackLabel={viewLabel}
             forceFallback={article.images.length === 0}
           />
         ) : article.affiliate_url &&
@@ -357,7 +368,7 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
           </div>
           <div className="rounded-3xl border border-border bg-card p-6 md:sticky md:top-24 md:self-start">
             <h2 className="text-lg font-semibold">概要</h2>
-            <p className="mt-3 text-sm text-muted">{article.summary}</p>
+            <p className="mt-3 text-sm text-muted">{summaryText}</p>
             <div className="mt-4 rounded-2xl border border-border bg-white p-4 text-sm text-muted">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
                 作品情報
@@ -365,16 +376,25 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
               <ul className="mt-2 space-y-1">
                 <li>作品番号: {article.slug}</li>
                 <li>配信日: {formatDate(article.published_at)}</li>
-                <li>
-                  メーカー: {makers.length > 0 ? makers.join(" / ") : "情報準備中"}
-                </li>
-                <li>ジャンル: {genres.length > 0 ? genres.join(" / ") : "情報準備中"}</li>
-                <li>
-                  出演女優:{" "}
-                  {article.related_actresses.length > 0
-                    ? article.related_actresses.join(" / ")
-                    : "情報準備中"}
-                </li>
+                {isTokyoMotion && durationText ? (
+                  <li>再生時間: {durationText}</li>
+                ) : null}
+                {!isTokyoMotion || hasMakers ? (
+                  <li>
+                    メーカー: {hasMakers ? makers.join(" / ") : "情報準備中"}
+                  </li>
+                ) : null}
+                {!isTokyoMotion || hasGenres ? (
+                  <li>
+                    {genreLabel}: {hasGenres ? genres.join(" / ") : "情報準備中"}
+                  </li>
+                ) : null}
+                {!isTokyoMotion || hasActresses ? (
+                  <li>
+                    出演女優:{" "}
+                    {hasActresses ? article.related_actresses.join(" / ") : "情報準備中"}
+                  </li>
+                ) : null}
               </ul>
             </div>
             <div className="mt-4 whitespace-pre-wrap text-sm">
@@ -386,8 +406,9 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
                   作品の見どころ
                 </p>
                 <p className="mt-2">
-                  {article.title}の魅力や見どころを中心に、出演女優やジャンルの特徴をまとめて
-                  確認できます。配信日や作品番号から関連作品を辿るのもおすすめです。
+                  {isTokyoMotion
+                    ? `${article.title}の概要やタグ、配信情報をまとめて確認できます。`
+                    : `${article.title}の魅力や見どころを中心に、出演女優やジャンルの特徴をまとめて確認できます。配信日や作品番号から関連作品を辿るのもおすすめです。`}
                 </p>
               </div>
             ) : null}
@@ -444,7 +465,7 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                FANZAで見る
+                {viewLabel}
               </a>
             ) : null}
           </div>

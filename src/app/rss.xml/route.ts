@@ -12,7 +12,12 @@ function escapeXml(value: string) {
 }
 
 function buildItemUrl(type: string, slug: string) {
-  const prefix = type === "work" ? "works" : type === "actress" ? "actresses" : "topics";
+  const prefix =
+    type === "work" || type === "tokyomotion"
+      ? "works"
+      : type === "actress"
+        ? "actresses"
+        : "topics";
   return `${SITE.url.replace(/\/$/, "")}/${prefix}/${slug}`;
 }
 

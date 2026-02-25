@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "static.mgstage.com" },
       { protocol: "https", hostname: "www.mgstage.com" },
       { protocol: "https", hostname: "image.mgstage.com" },
+      { protocol: "https", hostname: "cdn.tokyo-motion.net" },
       { protocol: "https", hostname: "api.dmm.com" },
       { protocol: "https", hostname: "wsrv.nl" },
       { protocol: "https", hostname: "images.weserv.nl" },

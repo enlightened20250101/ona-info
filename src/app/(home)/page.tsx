@@ -6,8 +6,8 @@ import {
   getActressRanking,
   getActressCovers,
   getLatestArticlesLite,
-  getLatestByTypeBeforeLite,
-  getLatestByTypeLite,
+  getLatestWorkFeedPageBeforeLite,
+  getLatestWorkFeedLite,
   getArticlesBySlugs,
   getWorkRankingSlugs,
 } from "@/lib/db";
@@ -28,9 +28,9 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const now = getJstNow();
   const nowIso = now.toISOString();
-  const availableWorks = await getLatestByTypeBeforeLite("work", nowIso, 30, {
-    includeBody: false,
-  });
+  const availableWorks = (
+    await getLatestWorkFeedPageBeforeLite(nowIso, 1, 30, { includeBody: false })
+  ).items;
   const heroCandidates = availableWorks.filter((work) => work.images[0]?.url);
   const heroFallback = heroCandidates.length > 0 ? heroCandidates : availableWorks;
   const heroWorks = pickDailyRandom(heroFallback, 9);
@@ -123,8 +123,10 @@ export default async function Home({
   const nowIso = now.toISOString();
   const [latest, latestWorks, availableWorks, topActresses] = await Promise.all([
     getLatestArticlesLite(100),
-    getLatestByTypeLite("work", 600, { includeBody: true }),
-    getLatestByTypeBeforeLite("work", nowIso, 600, { includeBody: true }),
+    getLatestWorkFeedLite(600, { includeBody: true }),
+    getLatestWorkFeedPageBeforeLite(nowIso, 1, 600, { includeBody: true }).then(
+      (result) => result.items
+    ),
     getActressRanking(8),
   ]);
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
