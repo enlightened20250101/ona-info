@@ -44,6 +44,17 @@ function logLine(message: string) {
   fs.appendFileSync(file, `${line}\n`);
 }
 
+function stringifyError(error: unknown) {
+  if (error instanceof Error) {
+    return error.stack || error.message;
+  }
+  try {
+    return JSON.stringify(error, null, 2);
+  } catch {
+    return String(error);
+  }
+}
+
 function schedulePublishedAt(index: number, total: number) {
   const now = new Date();
   const startHour = Number(process.env.PUBLISH_WINDOW_START ?? "9");
@@ -251,46 +262,55 @@ async function ingestFanzaWorks(options: FanzaIngestOptions = {}) {
   let inserted = 0;
   for (let index = 0; index < raws.length; index += 1) {
     const raw = raws[index];
-    const publishedAt = parseReleaseDate(raw.release_date) ?? schedulePublishedAt(index, total);
-    const article = normalizeFanzaWork(raw, publishedAt);
-    if (!article) {
-      continue;
-    }
-
-    if (article.related_actresses.length > 0) {
-      const relatedSet = new Set<string>();
-      for (const slug of article.related_actresses) {
-        const works = await findWorksByActressSlug(slug, 4);
-        works.forEach((work) => {
-          if (work.slug !== article.slug) {
-            relatedSet.add(work.slug);
-          }
-        });
+    try {
+      const publishedAt = parseReleaseDate(raw.release_date) ?? schedulePublishedAt(index, total);
+      const article = normalizeFanzaWork(raw, publishedAt);
+      if (!article) {
+        continue;
       }
-      article.related_works = Array.from(relatedSet).slice(0, 8);
-    }
 
-    // maker/genre を本文から拾って関連作品を補強
-    const metaKeywords = article.body
-      .split("\n")
-      .filter((line) => line.startsWith("メーカー:") || line.startsWith("ジャンル:"))
-      .map((line) => line.replace(/^.+?:\s*/, ""))
-      .join(" ");
-    if (metaKeywords) {
-      const works = await getLatestByType("work", 80);
-      const sameMeta = works
-        .filter((work) => work.slug !== article.slug && work.body.includes(metaKeywords))
-        .slice(0, 4)
-        .map((work) => work.slug);
-      article.related_works = Array.from(new Set([...article.related_works, ...sameMeta]));
-    }
+      if (article.related_actresses.length > 0) {
+        const relatedSet = new Set<string>();
+        for (const slug of article.related_actresses) {
+          const works = await findWorksByActressSlug(slug, 4);
+          works.forEach((work) => {
+            if (work.slug !== article.slug) {
+              relatedSet.add(work.slug);
+            }
+          });
+        }
+        article.related_works = Array.from(relatedSet).slice(0, 8);
+      }
 
-    const result = await insertArticleIfNew(article);
-    if (result.status === "inserted") {
-      inserted += 1;
-      logLine(`FANZA work ${article.slug}: inserted`);
+      // maker/genre を本文から拾って関連作品を補強
+      const metaKeywords = article.body
+        .split("\n")
+        .filter((line) => line.startsWith("メーカー:") || line.startsWith("ジャンル:"))
+        .map((line) => line.replace(/^.+?:\s*/, ""))
+        .join(" ");
+      if (metaKeywords) {
+        const works = await getLatestByType("work", 80);
+        const sameMeta = works
+          .filter((work) => work.slug !== article.slug && work.body.includes(metaKeywords))
+          .slice(0, 4)
+          .map((work) => work.slug);
+        article.related_works = Array.from(new Set([...article.related_works, ...sameMeta]));
+      }
+
+      const result = await insertArticleIfNew(article);
+      if (result.status === "inserted") {
+        inserted += 1;
+        logLine(`FANZA work ${article.slug}: inserted`);
+      }
+      if (inserted >= targetNew) break;
+    } catch (error) {
+      const pretty = stringifyError(error);
+      const url = raw.canonical_url || raw.affiliate_url || "";
+      logLine(
+        `FANZA ingest failed: content_id=${raw.content_id} title="${raw.title}" url=${url} error=${pretty}`
+      );
+      throw error;
     }
-    if (inserted >= targetNew) break;
   }
 
   return { inserted, fetched: total };
@@ -432,6 +452,7 @@ async function ingestTokyoMotionRss(options: { targetNew?: number; maxPages?: nu
         duration: raw.duration,
         tags: raw.tags,
         summary: raw.summary,
+        approval_status: "pending",
         published_at: raw.published_at,
         fetched_at: raw.fetched_at,
       });
@@ -524,6 +545,7 @@ async function ingestTokyoMotionSheet() {
       duration,
       tags,
       summary,
+      approval_status: "pending",
       published_at: publishedAt,
       fetched_at: scraped.fetched_at,
     });
@@ -637,8 +659,9 @@ async function run() {
         logLine(`${name} completed: ${JSON.stringify(result.value)}`);
         reportLines.push(`${name}: ok ${JSON.stringify(result.value)}`);
       } else {
-        logLine(`${name} failed: ${String(result.reason)}`);
-        reportLines.push(`${name}: failed ${String(result.reason)}`);
+        const pretty = stringifyError(result.reason);
+        logLine(`${name} failed: ${pretty}`);
+        reportLines.push(`${name}: failed ${pretty}`);
       }
     });
 
@@ -685,8 +708,9 @@ async function run() {
       logLine(`${name} completed: ${JSON.stringify(result.value)}`);
       reportLines.push(`${name}: ok ${JSON.stringify(result.value)}`);
     } else {
-      logLine(`${name} failed: ${String(result.reason)}`);
-      reportLines.push(`${name}: failed ${String(result.reason)}`);
+      const pretty = stringifyError(result.reason);
+      logLine(`${name} failed: ${pretty}`);
+      reportLines.push(`${name}: failed ${pretty}`);
     }
   });
 
@@ -713,7 +737,7 @@ async function run() {
 }
 
 run().catch(async (error) => {
-  const message = `Fatal error: ${String(error)}`;
+  const message = `Fatal error: ${stringifyError(error)}`;
   logLine(message);
   await sendNotification(message);
   process.exit(1);

@@ -21,6 +21,17 @@ function buildLitevideoEmbedHtml(contentId: string, affiliateId: string, size: s
   return `<div style="width:100%; padding-top: 75%; position:relative;"><iframe width="100%" height="100%" max-width="1280px" style="position: absolute; top: 0; left: 0;" src="${src}" scrolling="no" frameborder="0" allowfullscreen></iframe></div>`;
 }
 
+function stringifyError(error: unknown) {
+  if (error instanceof Error) {
+    return error.stack || error.message;
+  }
+  try {
+    return JSON.stringify(error, null, 2);
+  } catch {
+    return String(error);
+  }
+}
+
 export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<RawFanzaWork[]> {
   const apiId = getEnv("DMM_API_ID", "");
   const affiliateId = getEnv("DMM_AFFILIATE_ID", "");
@@ -79,22 +90,30 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
     }
 
     const url = `${FANZA_ENDPOINT}?${params.toString()}`;
-    const response = await fetchWithRetry(
-      url,
-      {
-        headers: { "User-Agent": "av-info-mvp/1.0" },
-        cache: "no-store",
-      },
-      {
-        retries: Number(getEnv("FETCH_RETRIES", "2")),
-        timeoutMs: Number(getEnv("FETCH_TIMEOUT_MS", "8000")),
-        backoffMs: Number(getEnv("FETCH_BACKOFF_MS", "800")),
-      }
-    );
+    let response: Response;
+    try {
+      response = await fetchWithRetry(
+        url,
+        {
+          headers: { "User-Agent": "av-info-mvp/1.0" },
+          cache: "no-store",
+        },
+        {
+          retries: Number(getEnv("FETCH_RETRIES", "2")),
+          timeoutMs: Number(getEnv("FETCH_TIMEOUT_MS", "8000")),
+          backoffMs: Number(getEnv("FETCH_BACKOFF_MS", "800")),
+        }
+      );
+    } catch (error) {
+      const pretty = stringifyError(error);
+      throw new Error(`FANZA fetch failed: ${url}\n${pretty}`);
+    }
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`FANZA API error: ${response.status} ${response.statusText} ${text}`);
+      throw new Error(
+        `FANZA API error: ${response.status} ${response.statusText}\nURL: ${url}\nBody: ${text}`
+      );
     }
 
     const data = await response.json();
