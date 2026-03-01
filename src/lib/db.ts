@@ -1,5 +1,6 @@
 import { createClient, type PostgrestError } from "@supabase/supabase-js";
 import { Article, ArticleType } from "./schema";
+import { buildTokyoMotionTitle, stripTagPrefix } from "./eroterest";
 
 type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -96,6 +97,10 @@ type Database = {
           duration: string | null;
           tags: Json;
           summary: string | null;
+          curated_tags: Json | null;
+          curated_actresses: Json | null;
+          fanza_code: string | null;
+          curation_ready: boolean | null;
           approval_status: string | null;
           published_at: string | null;
           fetched_at: string;
@@ -108,6 +113,10 @@ type Database = {
           duration?: string | null;
           tags?: Json;
           summary?: string | null;
+          curated_tags?: Json | null;
+          curated_actresses?: Json | null;
+          fanza_code?: string | null;
+          curation_ready?: boolean | null;
           approval_status?: string | null;
           published_at?: string | null;
           fetched_at?: string;
@@ -120,6 +129,10 @@ type Database = {
           duration?: string | null;
           tags?: Json;
           summary?: string | null;
+          curated_tags?: Json | null;
+          curated_actresses?: Json | null;
+          fanza_code?: string | null;
+          curation_ready?: boolean | null;
           approval_status?: string | null;
           published_at?: string | null;
           fetched_at?: string;
@@ -210,7 +223,10 @@ function parseArray<T>(value: unknown): T[] {
 
 function optimizeImageUrl(url: string | null | undefined) {
   if (!url) return url ?? "";
-  const base = process.env.NEXT_PUBLIC_IMAGE_PROXY_BASE?.trim();
+  let base = process.env.NEXT_PUBLIC_IMAGE_PROXY_BASE?.trim();
+  if (!base && /tokyo-motion\.net|tokyomotion\.net/i.test(url)) {
+    base = "https://wsrv.nl/";
+  }
   if (!base) return url;
   const quality = (process.env.NEXT_PUBLIC_IMAGE_PROXY_QUALITY ?? "70").trim();
   const width = (process.env.NEXT_PUBLIC_IMAGE_PROXY_WIDTH ?? "900").trim();
@@ -274,7 +290,9 @@ function buildTokyoMotionSummary(row: TokyoMotionRow) {
   if (row.duration) {
     parts.push(`再生時間: ${row.duration}`);
   }
-  const tags = parseArray<string>(row.tags);
+  const tags = parseArray<string>(row.tags)
+    .map((tag) => stripTagPrefix(String(tag)))
+    .filter(Boolean);
   if (tags.length > 0) {
     parts.push(`タグ: ${tags.join(" / ")}`);
   }
@@ -287,7 +305,20 @@ function buildTokyoMotionSummary(row: TokyoMotionRow) {
 function normalizeTokyoMotion(row: TokyoMotionRow): Article {
   const slug = `tm-${row.id}`;
   const rawSummary = row.summary?.trim() || buildTokyoMotionSummary(row);
-  const summary = rawSummary.replace(/&nbsp;|&#160;/gi, " ").replace(/\s+/g, " ").trim();
+  const summary = rawSummary
+    .replace(/&nbsp;|&#160;/gi, " ")
+    .replace(/genre:/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const curatedTags = parseArray<string>(row.curated_tags);
+  const curatedActresses = parseArray<string>(row.curated_actresses);
+  const baseTags = curatedTags.length > 0 ? curatedTags : parseArray<string>(row.tags);
+  const displayTitle = buildTokyoMotionTitle({
+    title: row.title,
+    summary,
+    meta_genres: baseTags,
+    related_actresses: curatedActresses,
+  });
   const images = row.thumb_url
     ? [{ url: optimizeImageUrl(row.thumb_url), alt: row.title }]
     : [];
@@ -296,17 +327,17 @@ function normalizeTokyoMotion(row: TokyoMotionRow): Article {
     id: `tm-${row.id}`,
     type: "tokyomotion",
     slug,
-    title: row.title,
+    title: displayTitle,
     summary,
     body: summary,
     images,
     source_url: row.url,
     affiliate_url: row.url,
     embed_html: null,
-    meta_genres: parseArray<string>(row.tags),
+    meta_genres: baseTags,
     meta_makers: [],
     related_works: [],
-    related_actresses: [],
+    related_actresses: curatedActresses,
     published_at: publishedAt,
     fetched_at: row.fetched_at,
   };
@@ -387,16 +418,23 @@ export async function insertTokyoMotionIfNew(
   return { status: "inserted" as const };
 }
 
+function applyTokyoPublishFilter<T>(query: T) {
+  return (query as any)
+    .eq("approval_status", "approved")
+    .eq("curation_ready", true);
+}
+
 export async function getLatestArticles(limit = 30) {
   const client = getSupabase();
   const [articlesResult, tokyoResult] = await Promise.all([
     client.from("articles").select("*").order("published_at", { ascending: false }).limit(limit),
-    client
-      .from("tokyomotion_videos")
-      .select("*")
-      .eq("approval_status", "approved")
-      .order("published_at", { ascending: false })
-      .limit(limit),
+    applyTokyoPublishFilter(
+      client
+        .from("tokyomotion_videos")
+        .select("*")
+        .order("published_at", { ascending: false })
+        .limit(limit)
+    ),
   ]);
 
   if (articlesResult.error) {
@@ -409,7 +447,7 @@ export async function getLatestArticles(limit = 30) {
   const articles = (articlesResult.data ?? []).map((row) =>
     normalizeArticle(row as Article)
   );
-  const tokyo = (tokyoResult.data ?? []).map((row) =>
+  const tokyo = (tokyoResult.data ?? []).map((row: TokyoMotionRow) =>
     normalizeTokyoMotion(row as TokyoMotionRow)
   );
   return [...articles, ...tokyo]
@@ -425,12 +463,13 @@ export async function getLatestArticlesLite(limit = 30) {
       .select(LIST_FIELDS)
       .order("published_at", { ascending: false })
       .limit(limit),
-    client
-      .from("tokyomotion_videos")
-      .select("*")
-      .eq("approval_status", "approved")
-      .order("published_at", { ascending: false })
-      .limit(limit),
+    applyTokyoPublishFilter(
+      client
+        .from("tokyomotion_videos")
+        .select("*")
+        .order("published_at", { ascending: false })
+        .limit(limit)
+    ),
   ]);
 
   if (articlesResult.error) {
@@ -443,7 +482,7 @@ export async function getLatestArticlesLite(limit = 30) {
   const articles = (articlesResult.data ?? []).map((row) =>
     normalizeArticleLite(row as Partial<Article>)
   );
-  const tokyo = (tokyoResult.data ?? []).map((row) =>
+  const tokyo = (tokyoResult.data ?? []).map((row: TokyoMotionRow) =>
     normalizeTokyoMotionLite(row as TokyoMotionRow)
   );
   return [...articles, ...tokyo]
@@ -459,12 +498,13 @@ export async function getLatestArticlesForSitemap(limit = 5000) {
       .select(SITEMAP_FIELDS)
       .order("published_at", { ascending: false })
       .limit(limit),
-    client
-      .from("tokyomotion_videos")
-      .select("id,published_at")
-      .eq("approval_status", "approved")
-      .order("published_at", { ascending: false })
-      .limit(limit),
+    applyTokyoPublishFilter(
+      client
+        .from("tokyomotion_videos")
+        .select("id,published_at")
+        .order("published_at", { ascending: false })
+        .limit(limit)
+    ),
   ]);
   if (articlesResult.error) throw articlesResult.error;
   if (tokyoResult.error) throw tokyoResult.error;
@@ -487,10 +527,9 @@ export async function getArticlesCount() {
   const client = getSupabase();
   const [articleCount, tokyoCount] = await Promise.all([
     client.from("articles").select("id", { count: "exact", head: true }),
-    client
-      .from("tokyomotion_videos")
-      .select("id", { count: "exact", head: true })
-      .eq("approval_status", "approved"),
+    applyTokyoPublishFilter(
+      client.from("tokyomotion_videos").select("id", { count: "exact", head: true })
+    ),
   ]);
   if (articleCount.error) throw articleCount.error;
   if (tokyoCount.error) throw tokyoCount.error;
@@ -500,16 +539,13 @@ export async function getArticlesCount() {
 export async function getLatestByType(type: ArticleType, limit = 10) {
   const client = getSupabase();
   if (type === "tokyomotion") {
-    const { data, error } = await client
-      .from("tokyomotion_videos")
-      .select("*")
-      .eq("approval_status", "approved")
-      .order("published_at", { ascending: false })
-      .limit(limit);
+    const { data, error } = await applyTokyoPublishFilter(
+      client.from("tokyomotion_videos").select("*").order("published_at", { ascending: false }).limit(limit)
+    );
     if (error) {
       throw error;
     }
-    return (data ?? []).map((row) => normalizeTokyoMotion(row as TokyoMotionRow));
+    return (data ?? []).map((row: TokyoMotionRow) => normalizeTokyoMotion(row as TokyoMotionRow));
   }
   const { data, error } = await client
     .from("articles")
@@ -532,16 +568,15 @@ export async function getLatestByTypeLite(
 ) {
   const client = getSupabase();
   if (type === "tokyomotion") {
-    const { data, error } = await client
-      .from("tokyomotion_videos")
-      .select("*")
-      .eq("approval_status", "approved")
-      .order("published_at", { ascending: false })
-      .limit(limit);
+    const { data, error } = await applyTokyoPublishFilter(
+      client.from("tokyomotion_videos").select("*").order("published_at", { ascending: false }).limit(limit)
+    );
     if (error) {
       throw error;
     }
-    return (data ?? []).map((row) => normalizeTokyoMotionLite(row as TokyoMotionRow));
+    return (data ?? []).map((row: TokyoMotionRow) =>
+      normalizeTokyoMotionLite(row as TokyoMotionRow)
+    );
   }
   const selectFields = options.includeBody ? LIST_FIELDS_WITH_BODY : LIST_FIELDS;
   const { data, error } = await client
@@ -571,19 +606,20 @@ export async function getLatestWorkFeedLite(
       .eq("type", "work")
       .order("published_at", { ascending: false })
       .limit(limit),
-    client
-      .from("tokyomotion_videos")
-      .select("*")
-      .eq("approval_status", "approved")
-      .order("published_at", { ascending: false })
-      .limit(limit),
+    applyTokyoPublishFilter(
+      client
+        .from("tokyomotion_videos")
+        .select("*")
+        .order("published_at", { ascending: false })
+        .limit(limit)
+    ),
   ]);
   if (articlesResult.error) throw articlesResult.error;
   if (tokyoResult.error) throw tokyoResult.error;
   const articles = (articlesResult.data ?? []).map((row) =>
     normalizeArticleLite(row as Partial<Article>)
   );
-  const tokyo = (tokyoResult.data ?? []).map((row) =>
+  const tokyo = (tokyoResult.data ?? []).map((row: TokyoMotionRow) =>
     normalizeTokyoMotionLite(row as TokyoMotionRow)
   );
   return [...articles, ...tokyo]
@@ -914,16 +950,17 @@ export async function searchArticlesPageLite(options: {
   const includeTokyo = !options.type || options.type === "work" || options.type === "tokyomotion";
 
   if (options.type === "tokyomotion") {
-    let tokyoFallback = client
-      .from("tokyomotion_videos")
-      .select("*", { count: "exact" })
-      .eq("approval_status", "approved");
+    let tokyoFallback = applyTokyoPublishFilter(
+      client.from("tokyomotion_videos").select("*", { count: "exact" })
+    );
     tokyoFallback = applyBefore(tokyoFallback as never);
     tokyoFallback = applyOrdering(tokyoFallback as never);
     const { data, error, count } = await tokyoFallback.range(from, to);
     if (error) throw error;
     return {
-      items: (data ?? []).map((row) => normalizeTokyoMotionLite(row as TokyoMotionRow)),
+      items: (data ?? []).map((row: TokyoMotionRow) =>
+        normalizeTokyoMotionLite(row as TokyoMotionRow)
+      ),
       total: count ?? 0,
     };
   }
@@ -946,15 +983,14 @@ export async function searchArticlesPageLite(options: {
     }
 
     const take = to + 1;
-    let tokyoFallback = client
-      .from("tokyomotion_videos")
-      .select("*", { count: "exact" })
-      .eq("approval_status", "approved");
+    let tokyoFallback = applyTokyoPublishFilter(
+      client.from("tokyomotion_videos").select("*", { count: "exact" })
+    );
     tokyoFallback = applyBefore(tokyoFallback as never);
     tokyoFallback = applyOrdering(tokyoFallback as never);
     const tokyoResult = await tokyoFallback.range(0, take - 1);
     if (tokyoResult.error) throw tokyoResult.error;
-    const tokyoItems = (tokyoResult.data ?? []).map((row) =>
+    const tokyoItems = (tokyoResult.data ?? []).map((row: TokyoMotionRow) =>
       normalizeTokyoMotionLite(row as TokyoMotionRow)
     );
     const merged = [...articleItems, ...tokyoItems].sort((a, b) =>
@@ -996,16 +1032,17 @@ export async function searchArticlesPageLite(options: {
 
   const take = to + 1;
   const tokyoLikeQuery = `%${query}%`;
-  let tokyoBuilder = client
-    .from("tokyomotion_videos")
-    .select("*", { count: "exact" })
-    .eq("approval_status", "approved")
-    .or([`title.ilike.${tokyoLikeQuery}`, `summary.ilike.${tokyoLikeQuery}`].join(","));
+  let tokyoBuilder = applyTokyoPublishFilter(
+    client
+      .from("tokyomotion_videos")
+      .select("*", { count: "exact" })
+      .or([`title.ilike.${tokyoLikeQuery}`, `summary.ilike.${tokyoLikeQuery}`].join(","))
+  );
   tokyoBuilder = applyBefore(tokyoBuilder as never);
   tokyoBuilder = applyOrdering(tokyoBuilder as never);
   const tokyoResult = await tokyoBuilder.range(0, take - 1);
   if (tokyoResult.error) throw tokyoResult.error;
-  const tokyoItems = (tokyoResult.data ?? []).map((row) =>
+  const tokyoItems = (tokyoResult.data ?? []).map((row: TokyoMotionRow) =>
     normalizeTokyoMotionLite(row as TokyoMotionRow)
   );
   const merged = [...articleItems, ...tokyoItems].sort((a, b) =>
@@ -1091,13 +1128,14 @@ export async function getLatestWorkFeedPageBeforeLite(
       .lte("published_at", beforeIso)
       .order("published_at", { ascending: false })
       .range(0, take - 1),
-    client
-      .from("tokyomotion_videos")
-      .select("*", { count: "exact" })
-      .eq("approval_status", "approved")
-      .lte("published_at", beforeIso)
-      .order("published_at", { ascending: false })
-      .range(0, take - 1),
+    applyTokyoPublishFilter(
+      client
+        .from("tokyomotion_videos")
+        .select("*", { count: "exact" })
+        .lte("published_at", beforeIso)
+        .order("published_at", { ascending: false })
+        .range(0, take - 1)
+    ),
   ]);
   if (workResult.error) throw workResult.error;
   if (tokyoResult.error) throw tokyoResult.error;
@@ -1105,7 +1143,7 @@ export async function getLatestWorkFeedPageBeforeLite(
   const workItems = (workResult.data ?? []).map((row) =>
     normalizeArticleLite(row as Partial<Article>)
   );
-  const tokyoItems = (tokyoResult.data ?? []).map((row) =>
+  const tokyoItems = (tokyoResult.data ?? []).map((row: TokyoMotionRow) =>
     normalizeTokyoMotionLite(row as TokyoMotionRow)
   );
   const merged = [...workItems, ...tokyoItems].sort((a, b) =>
@@ -1203,12 +1241,9 @@ export async function getArticleBySlug(slug: string) {
 
   if (slug.startsWith("tm-")) {
     const id = slug.replace(/^tm-/, "");
-    const { data: tokyoData, error: tokyoError } = await client
-      .from("tokyomotion_videos")
-      .select("*")
-      .eq("id", id)
-      .eq("approval_status", "approved")
-      .maybeSingle();
+    const { data: tokyoData, error: tokyoError } = await applyTokyoPublishFilter(
+      client.from("tokyomotion_videos").select("*").eq("id", id)
+    ).maybeSingle();
     if (tokyoError) {
       throw tokyoError;
     }

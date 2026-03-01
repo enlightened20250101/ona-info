@@ -5,12 +5,13 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { getLatestByType } from "@/lib/db";
 import { SITE } from "@/lib/site";
 import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
+import { Article } from "@/lib/schema";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const topics = await getLatestByType("topic", 60);
-  const rankingTopics = topics.filter((topic) =>
+  const rankingTopics = topics.filter((topic: Article) =>
     topic.source_url.startsWith("internal:ranking:")
   );
   const previewImage =
@@ -36,7 +37,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function WorksRankingPage() {
   const topics = await getLatestByType("topic", 60);
-  const rankingTopics = topics.filter((topic) =>
+  const rankingTopics = topics.filter((topic: Article) =>
     topic.source_url.startsWith("internal:ranking:")
   );
   const base = SITE.url.replace(/\/$/, "");
@@ -86,7 +87,7 @@ export default async function WorksRankingPage() {
           {rankingTopics.length === 0 ? (
             <p className="text-sm text-muted">ランキング情報がまだありません。</p>
           ) : (
-            rankingTopics.map((topic) => (
+            rankingTopics.map((topic: Article) => (
               <Link
                 key={topic.id}
                 href={`/topics/${topic.slug}`}

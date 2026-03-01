@@ -8,6 +8,7 @@ import GlobalTagBar from "@/components/GlobalTagBar";
 import GlobalTagSidebar from "@/components/GlobalTagSidebar";
 import Footer from "@/components/Footer";
 import RouteProgress from "@/components/RouteProgress";
+import { AdminChrome, AdminPadding } from "@/components/AdminAware";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -84,13 +85,15 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <RouteProgress />
         </Suspense>
-        <MobileNav />
-        <GlobalTagBar />
-        <GlobalTagSidebar />
-        <div className="lg:pl-52">{children}</div>
-        <div className="lg:pl-52">
+        <AdminChrome>
+          <MobileNav />
+          <GlobalTagBar />
+          <GlobalTagSidebar />
+        </AdminChrome>
+        <AdminPadding>{children}</AdminPadding>
+        <AdminPadding>
           <Footer />
-        </div>
+        </AdminPadding>
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger

@@ -20,7 +20,7 @@ export async function generateMetadata({
   const normalizedTag = normalizeTag(tag) || tag || "タグ";
   const label = tagLabel(normalizedTag);
   const previewResult = await getLatestByType("work", 60);
-  const previewWork = previewResult.find((work) => {
+  const previewWork = previewResult.find((work: Article) => {
     const text = `${work.title} ${work.summary}`;
     const metaTags = buildMetaTagsFromWork(work);
     return (
@@ -109,7 +109,7 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
   });
   const matchedLimited = matched.slice(0, 12);
 
-  const popularWorks = works.filter((work) => {
+  const popularWorks = works.filter((work: Article) => {
     const text = `${work.title} ${work.summary}`;
     const metaTags = buildMetaTagsFromWork(work);
     return (
@@ -146,32 +146,41 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
   const relatedMetaTags = Array.from(
     new Set(
       popularWorks
-        .flatMap((work) => buildMetaTagsFromWork(work))
-        .filter((tag) => tag.startsWith("genre:") || tag.startsWith("maker:"))
+        .flatMap((work: Article) => buildMetaTagsFromWork(work))
+        .filter((tag: string) => tag.startsWith("genre:") || tag.startsWith("maker:"))
     )
-  ).slice(0, 8);
+  )
+    .map((tag) => String(tag))
+    .filter(Boolean)
+    .slice(0, 8);
 
-  const todayTopics = topics.filter((topic) => {
+  const todayTopics = topics.filter((topic: Article) => {
     const text = `${topic.title} ${topic.summary}`;
     return extractTags(text).includes(normalizedTag) || text.includes(keyword);
   });
 
   const relatedActresses = Array.from(
-    new Set(popularWorks.flatMap((work) => work.related_actresses))
-  ).slice(0, 12);
+    new Set(popularWorks.flatMap((work: Article) => work.related_actresses))
+  )
+    .map((name) => String(name))
+    .filter(Boolean)
+    .slice(0, 12);
   const relatedTags = Array.from(
     new Set(
       popularWorks
-        .flatMap((work) => buildMetaTagsFromWork(work))
-        .filter((tag) => tag !== normalizedTag)
+        .flatMap((work: Article) => buildMetaTagsFromWork(work))
+        .filter((tag: string) => tag !== normalizedTag)
     )
-  ).slice(0, 16);
+  )
+    .map((tag) => String(tag))
+    .filter(Boolean)
+    .slice(0, 16);
   const recentTagArticles = matched.slice(0, 12);
   const itemList = {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: `#${keyword}の人気作品`,
-    itemListElement: popularWorks.slice(0, 12).map((work, index) => ({
+    itemListElement: popularWorks.slice(0, 12).map((work: Article, index: number) => ({
       "@type": "ListItem",
       position: index + 1,
       url: `${base}/works/${work.slug}`,
@@ -291,7 +300,7 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
             <p className="mt-3 text-sm text-muted">まだ作品がありません。</p>
           ) : (
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {popularWorks.slice(0, 6).map((work) => (
+              {popularWorks.slice(0, 6).map((work: Article) => (
                 <Link
                   key={work.id}
                   href={`/works/${work.slug}`}
@@ -389,7 +398,7 @@ export default async function TagPage({ params }: { params: Promise<{ tag: strin
             <p className="mt-3 text-sm text-muted">まだトピックがありません。</p>
           ) : (
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {todayTopics.slice(0, 6).map((topic) => (
+              {todayTopics.slice(0, 6).map((topic: Article) => (
                 <Link
                   key={topic.id}
                   href={`/topics/${topic.slug}`}

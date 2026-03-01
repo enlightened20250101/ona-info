@@ -11,6 +11,7 @@ import { buildPagination } from "@/lib/pagination";
 import { extractMetaTagsFromBody } from "@/lib/tagging";
 import { SITE } from "@/lib/site";
 import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
+import { Article } from "@/lib/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +68,7 @@ export default async function ActressPage({
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: `${slug}の関連作品`,
-    itemListElement: works.slice(0, 12).map((work, index) => ({
+    itemListElement: works.slice(0, 12).map((work: Article, index) => ({
       "@type": "ListItem",
       position: index + 1,
       url: `${base}/works/${work.slug}`,
@@ -77,17 +78,17 @@ export default async function ActressPage({
   const latestWorks = await getLatestByType("work", 120);
   const relatedTags = Array.from(
     new Set(
-      works.flatMap((work) =>
+      works.flatMap((work: Article) =>
         extractMetaTagsFromBody(work.body).filter((tag) => tag.startsWith("genre:"))
       )
     )
   ).slice(0, 6);
   const recommendedWorks = latestWorks
-    .filter((work) => work.related_actresses.includes(slug))
+    .filter((work: Article) => work.related_actresses.includes(slug))
     .slice(0, 8);
   const relatedTagsFromWorks = Array.from(
     new Set(
-      works.flatMap((work) =>
+      works.flatMap((work: Article) =>
         extractMetaTagsFromBody(work.body).filter((tag) => tag.startsWith("genre:"))
       )
     )
@@ -95,11 +96,14 @@ export default async function ActressPage({
   const relatedActresses = Array.from(
     new Set(
       latestWorks
-        .filter((work) => work.related_actresses.includes(slug))
-        .flatMap((work) => work.related_actresses)
-        .filter((name) => name !== slug)
+        .filter((work: Article) => work.related_actresses.includes(slug))
+        .flatMap((work: Article) => work.related_actresses)
+        .filter((name: string) => name !== slug)
     )
-  ).slice(0, 12);
+  )
+    .map((name) => String(name))
+    .filter(Boolean)
+    .slice(0, 12);
   const totalPages = Math.max(1, Math.ceil(worksResult.total / perPage));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * perPage;
@@ -312,7 +316,7 @@ export default async function ActressPage({
           <section className="rounded-3xl border border-border bg-card p-6">
             <h2 className="text-lg font-semibold">おすすめ作品</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {recommendedWorks.map((work) => (
+              {recommendedWorks.map((work: Article) => (
                 <Link
                   key={work.id}
                   href={`/works/${work.slug}`}

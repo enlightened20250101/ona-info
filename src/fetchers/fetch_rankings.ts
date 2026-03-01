@@ -1,5 +1,6 @@
 import { getEnv } from "@/lib/env";
 import { getLatestByType } from "@/lib/db";
+import { Article } from "@/lib/schema";
 import { toIsoString } from "@/lib/text";
 
 export type RawRanking = {
@@ -33,7 +34,7 @@ export async function fetchRankings(): Promise<RawRanking[]> {
     .map((p) => Number(p))
     .reduce((acc, v) => acc + v, 0);
 
-  const works = await getLatestByType("work", 30);
+  const works = (await getLatestByType("work", 30)) as Article[];
   if (works.length === 0) {
     return [];
   }
@@ -41,8 +42,8 @@ export async function fetchRankings(): Promise<RawRanking[]> {
   const todayList = seededShuffle(works, seed).slice(0, 10);
   const yesterdayList = seededShuffle(works, seed - 1).slice(0, 10);
 
-  const changes = todayList.map((work, index) => {
-    const prevIndex = yesterdayList.findIndex((w) => w.slug === work.slug);
+  const changes = todayList.map((work: Article, index: number) => {
+    const prevIndex = yesterdayList.findIndex((w: Article) => w.slug === work.slug);
     const diff = prevIndex === -1 ? "new" : prevIndex - index;
     const diffLabel = diff === "new" ? "new" : diff > 0 ? `↑${diff}` : diff < 0 ? `↓${Math.abs(diff)}` : "→0";
     return `${index + 1}. ${work.title} (${work.slug}) ${diffLabel}`;

@@ -7,6 +7,7 @@ import { getLatestWorkFeedPageBeforeLite, searchArticlesPageLite } from "@/lib/d
 import { SITE } from "@/lib/site";
 import { getJstNow } from "@/lib/releaseDate";
 import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
+import { Article } from "@/lib/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -99,7 +100,7 @@ export default async function WorksPage({
     "@id": `${base}/works#itemlist`,
     "@type": "ItemList",
     name: "最新の作品",
-    itemListElement: pageItems.slice(0, 12).map((work, index) => ({
+    itemListElement: pageItems.slice(0, 12).map((work: Article, index: number) => ({
       "@type": "ListItem",
       position: index + 1,
       url: `${base}/works/${work.slug}`,
@@ -181,7 +182,7 @@ export default async function WorksPage({
         </header>
 
         <section className="grid gap-4 sm:grid-cols-2">
-          {pageItems.map((work) => (
+          {pageItems.map((work: Article) => (
             <Link
               key={work.id}
               href={`/works/${work.slug}`}

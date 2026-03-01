@@ -214,13 +214,16 @@ async function buildTopicLinks(text: string) {
   const works = await getLatestByType("work", 20);
   const tags = extractTags(text);
   const relatedWorks = pickRelatedWorks(works, tags, 6);
-  const relatedActresses = Array.from(
-    new Set(
-      works
-        .filter((work) => relatedWorks.includes(work.slug))
-        .flatMap((work) => work.related_actresses)
+    const relatedActresses = Array.from(
+      new Set(
+        works
+          .filter((work: Article) => relatedWorks.includes(work.slug))
+          .flatMap((work: Article) => work.related_actresses)
+      )
     )
-  ).slice(0, 6);
+      .map((name) => String(name))
+      .filter(Boolean)
+      .slice(0, 6);
 
   return { relatedWorks, relatedActresses, tags };
 }
@@ -291,9 +294,12 @@ async function ingestFanzaWorks(options: FanzaIngestOptions = {}) {
       if (metaKeywords) {
         const works = await getLatestByType("work", 80);
         const sameMeta = works
-          .filter((work) => work.slug !== article.slug && work.body.includes(metaKeywords))
+          .filter(
+            (work: Article) =>
+              work.slug !== article.slug && work.body.includes(metaKeywords)
+          )
           .slice(0, 4)
-          .map((work) => work.slug);
+          .map((work: Article) => work.slug);
         article.related_works = Array.from(new Set([...article.related_works, ...sameMeta]));
       }
 

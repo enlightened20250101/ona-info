@@ -6,6 +6,7 @@ import { getActressCovers, getActressRanking, getLatestByType } from "@/lib/db";
 import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
 import { SITE } from "@/lib/site";
 import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
+import { Article } from "@/lib/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
           topSlug,
           coverPoolAll,
           coverMap.get(topSlug) ??
-            works.find((work) => work.related_actresses.includes(topSlug))?.images?.[0]?.url ??
+            works.find((work: Article) => work.related_actresses.includes(topSlug))?.images?.[0]?.url ??
             null,
           "ranking-og"
         )
@@ -61,7 +62,7 @@ export default async function ActressRankingPage() {
         row.actress,
         coverPoolAll,
         coverMap.get(row.actress) ??
-          works.find((work) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ??
+          works.find((work: Article) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ??
           null,
         "ranking"
       ) ??

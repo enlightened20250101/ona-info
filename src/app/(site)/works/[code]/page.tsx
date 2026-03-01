@@ -18,6 +18,7 @@ import { SITE } from "@/lib/site";
 import { Article } from "@/lib/schema";
 import { getJstNow, parsePublishedAt } from "@/lib/releaseDate";
 import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
+import { buildTokyoMotionDescription } from "@/lib/eroterest";
 
 export const dynamic = "force-dynamic";
 
@@ -115,10 +116,14 @@ export async function generateMetadata({
   const genreLabel = article.meta_genres?.[0] ?? "";
   const suffixParts = [actressLabel, makerLabel, genreLabel].filter(Boolean);
   const suffix = suffixParts.length > 0 ? `｜${suffixParts.join("・")}` : "";
+  const isTokyoMotion = article.type === "tokyomotion";
+  const shortDescription = isTokyoMotion
+    ? buildTokyoMotionDescription(article)
+    : article.summary;
 
   return {
     title: `${article.title} (${article.slug})${suffix} | ${SITE.name}`,
-    description: `${article.title} (${article.slug})の動画情報を無料でチェック。${article.summary}`,
+    description: `${article.title} (${article.slug})の動画情報を無料でチェック。${shortDescription}`,
     robots: {
       index: true,
       follow: true,
@@ -128,7 +133,7 @@ export async function generateMetadata({
     },
     openGraph: {
       title: `${article.title} (${article.slug}) | エロ動画・動画 | ${SITE.name}`,
-      description: `${article.title}のエロ動画・動画情報を無料でチェック。${article.summary}`,
+      description: `${article.title}のエロ動画・動画情報を無料でチェック。${shortDescription}`,
       type: "article",
       images: article.images?.[0]?.url ? [{ url: article.images[0].url }] : undefined,
     },
@@ -164,9 +169,7 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
   const viewLabel = article.type === "tokyomotion" ? "TokyoMotionで見る" : "FANZAで見る";
   const isTokyoMotion = article.type === "tokyomotion";
   const genreLabel = isTokyoMotion ? "タグ" : "ジャンル";
-  const summaryText = isTokyoMotion
-    ? article.summary.replace(/&nbsp;|&#160;/gi, " ").replace(/\s+/g, " ").trim()
-    : article.summary;
+  const summaryText = isTokyoMotion ? buildTokyoMotionDescription(article) : article.summary;
   const durationMatch = isTokyoMotion ? summaryText.match(/再生時間:\s*([0-9:]+)/i) : null;
   const durationText = durationMatch?.[1] ?? "";
   const genres = (article.meta_genres ?? []).filter(Boolean);
@@ -181,7 +184,7 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
     "@id": `${base}/works/${article.slug}#article`,
     "@type": "Article",
     headline: article.title,
-    description: article.summary,
+    description: summaryText,
     datePublished: article.published_at,
     dateModified: article.fetched_at,
     mainEntityOfPage: {
