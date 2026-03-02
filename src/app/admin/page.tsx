@@ -236,6 +236,7 @@ export default function AdminPage() {
       summary: item.summary ?? "",
       meta_genres: draft?.tags ?? [],
       related_actresses: draft?.actresses ?? [],
+      slug: `tm-${item.id}`,
     });
   }
 
@@ -522,7 +523,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <div className="mx-auto max-w-7xl p-6">
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
           <div className="rounded border border-border bg-background px-6 py-3 text-sm">
@@ -701,7 +702,7 @@ export default function AdminPage() {
                       <input
                         type="text"
                         list="tag-options"
-                        className="w-full rounded border border-border bg-background px-2 py-1 text-xs"
+                        className="w-40 rounded border border-border bg-background px-2 py-1 text-xs"
                         placeholder="タグを追加"
                         value={drafts[item.id]?.tagInput ?? ""}
                         onChange={(e) => updateDraft(item.id, { tagInput: e.target.value })}
@@ -758,7 +759,7 @@ export default function AdminPage() {
                       <input
                         type="text"
                         list="actress-options"
-                        className="w-full rounded border border-border bg-background px-2 py-1 text-xs"
+                        className="w-72 rounded border border-border bg-background px-2 py-1 text-xs"
                         placeholder="女優名を追加"
                         value={drafts[item.id]?.actressInput ?? ""}
                         onChange={(e) => updateDraft(item.id, { actressInput: e.target.value })}

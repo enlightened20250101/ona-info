@@ -318,6 +318,7 @@ function normalizeTokyoMotion(row: TokyoMotionRow): Article {
     summary,
     meta_genres: baseTags,
     related_actresses: curatedActresses,
+    slug,
   });
   const images = row.thumb_url
     ? [{ url: optimizeImageUrl(row.thumb_url), alt: row.title }]

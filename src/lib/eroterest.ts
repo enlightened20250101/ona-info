@@ -55,24 +55,66 @@ function shorten(text: string, max = 70) {
 
 const ROLE_KEYWORDS = [
   "お姉さん",
+  "お姉ちゃん",
   "巨乳",
   "美乳",
   "美尻",
+  "美脚",
   "スレンダー",
   "グラマー",
   "人妻",
   "熟女",
+  "ギャル",
+  "清楚",
+  "清純",
   "JK",
   "女子校生",
   "学生",
+  "大学生",
   "OL",
   "ナース",
   "メイド",
   "アイドル",
+  "教師",
+  "先生",
+  "受付嬢",
+  "秘書",
+  "店員",
+  "モデル",
+  "女医",
+  "女子大生",
+  "女子アナ",
+  "スポーツ系",
   "素人",
 ];
 
-const SITUATION_KEYWORDS = ["ナンパ", "初撮り", "ハメ撮り", "逆レイプ", "寝取られ", "痴漢"];
+const SITUATION_KEYWORDS = [
+  "ナンパ",
+  "初撮り",
+  "ハメ撮り",
+  "逆レイプ",
+  "寝取られ",
+  "痴漢",
+  "不倫",
+  "浮気",
+  "合コン",
+  "パーティ",
+  "風呂",
+  "お風呂",
+  "温泉",
+  "野外",
+  "車内",
+  "ホテル",
+  "マッサージ",
+  "整体",
+  "面接",
+  "家庭教師",
+  "個人撮影",
+  "パイパン",
+  "着エロ",
+  "拘束",
+  "監禁",
+];
 
 const ACTION_KEYWORDS = [
   "フェラ",
@@ -82,6 +124,7 @@ const ACTION_KEYWORDS = [
   "バック",
   "手コキ",
   "指マン",
+  "指責め",
   "乳首",
   "パイズリ",
   "顔射",
@@ -91,6 +134,26 @@ const ACTION_KEYWORDS = [
   "ごっくん",
   "アナル",
   "電マ",
+  "手マン",
+  "素股",
+  "玩具",
+  "おもちゃ",
+  "ローター",
+  "バイブ",
+  "イラマチオ",
+  "口内射精",
+  "連続",
+  "3P",
+  "4P",
+  "乱交",
+  "二穴",
+  "キス",
+  "接吻",
+  "パイ揉み",
+  "乳揉み",
+  "顔舐め",
+  "足舐め",
+  "コスプレ",
 ];
 
 function pickTag(tags: string[], keywords: string[]) {
@@ -120,43 +183,64 @@ function buildActionPhrase(tag: string) {
   return map[tag] || `${tag}で悶絶`;
 }
 
-function buildTitleFromTags(tags: string[], actress: string) {
-  const role = pickTag(tags, ROLE_KEYWORDS);
-  const situation = pickTag(tags, SITUATION_KEYWORDS);
-  const action1 = pickTag(tags, ACTION_KEYWORDS);
-  const action2 = tags.find(
-    (tag) =>
-      tag !== action1 &&
-      ACTION_KEYWORDS.some((key) => tag.includes(key))
+function hashSeed(value: string) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function shuffleWithSeed<T>(items: T[], seed: string) {
+  const arr = [...items];
+  let state = hashSeed(seed) || 1;
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    const j = state % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function pickVariant<T>(items: T[], seed: string) {
+  if (items.length === 0) return items[0] as T;
+  const idx = hashSeed(seed) % items.length;
+  return items[idx];
+}
+
+function buildTitleFromTags(tags: string[], actress: string, seed: string) {
+  const shuffledTags = shuffleWithSeed(tags, seed);
+  const role = pickTag(shuffledTags, ROLE_KEYWORDS);
+  const situation = pickTag(shuffledTags, SITUATION_KEYWORDS);
+  const shuffledActions = shuffleWithSeed(
+    shuffledTags.filter((tag) => ACTION_KEYWORDS.some((key) => tag.includes(key))),
+    `${seed}-actions`
   );
+  const action1 = shuffledActions[0] ?? pickTag(shuffledTags, ACTION_KEYWORDS);
+  const action2 = shuffledActions.find((tag) => tag && tag !== action1) ?? "";
 
   const headline = role || actress || situation || action1 || tags[0] || "";
   const actionPhrase1 = buildActionPhrase(action1);
   const actionPhrase2 = buildActionPhrase(action2 || "");
 
-  const parts: string[] = [];
-  if (headline) {
-    parts.push(`【${headline}】`);
-  }
-  const subject = actress ? `${actress}が` : role ? `${role}が` : "";
-  if (subject) {
-    parts.push(subject);
-  }
-  if (situation) {
-    parts.push(`${situation}で`);
-  }
-  if (actionPhrase1) {
-    parts.push(`${actionPhrase1}！`);
-  }
-  if (actionPhrase2) {
-    parts.push(`さらに${actionPhrase2}！`);
-  }
-  if (!actionPhrase1 && !actionPhrase2) {
-    parts.push("淫らに乱れる！");
-  }
+  const subject = actress ? `${actress}` : role ? `${role}` : "";
+  const prefix = headline ? `【${headline}】` : "";
 
-  const composed = parts.join("").replace(/\s+/g, " ").trim();
-  return composed;
+  const templates = [
+    `${prefix}${subject ? `${subject}が` : ""}${situation ? `${situation}で` : ""}${actionPhrase1 ? `${actionPhrase1}！` : ""}${actionPhrase2 ? `さらに${actionPhrase2}！` : ""}`,
+    `${prefix}${subject ? `${subject}の` : ""}${situation ? `${situation}で` : ""}${actionPhrase1 ? `${actionPhrase1}！` : ""}${actionPhrase2 ? `続けて${actionPhrase2}！` : ""}`,
+    `${prefix}${subject ? `${subject}が` : ""}${actionPhrase1 ? `${actionPhrase1}！` : ""}${situation ? `${situation}で` : ""}${actionPhrase2 ? `止まらず${actionPhrase2}！` : ""}`,
+    `${prefix}${subject ? `${subject}が` : ""}${situation ? `${situation}で` : ""}${actionPhrase1 ? `${actionPhrase1}！` : ""}${actionPhrase2 ? `たまらず${actionPhrase2}！` : ""}`,
+    `${prefix}${subject ? `${subject}が` : ""}${actionPhrase1 ? `${actionPhrase1}！` : ""}${actionPhrase2 ? `おかわり${actionPhrase2}！` : ""}`,
+    `${prefix}${subject ? `${subject}の` : ""}${actionPhrase1 ? `${actionPhrase1}！` : ""}${situation ? `${situation}で` : ""}${actionPhrase2 ? `一気に${actionPhrase2}！` : ""}`,
+    `${prefix}${subject ? `${subject}が` : ""}${situation ? `${situation}で` : ""}${actionPhrase1 ? `${actionPhrase1}！` : ""}${actionPhrase2 ? `追い打ち${actionPhrase2}！` : ""}`,
+    `${prefix}${subject ? `${subject}が` : ""}${actionPhrase1 ? `${actionPhrase1}！` : ""}${situation ? `${situation}で` : ""}${actionPhrase2 ? `最後に${actionPhrase2}！` : ""}`,
+    `${prefix}${subject ? `${subject}の` : ""}${actionPhrase1 ? `${actionPhrase1}！` : ""}${actionPhrase2 ? `止まらず${actionPhrase2}！` : ""}`,
+  ];
+
+  const fallback = `${prefix}${subject ? `${subject}が` : ""}淫らに乱れる！`;
+  const composed = pickVariant(templates, seed).replace(/\s+/g, " ").trim();
+  return composed || fallback;
 }
 
 export function getTokyoMotionTags(
@@ -175,22 +259,23 @@ export function getTokyoMotionTags(
 }
 
 export function buildTokyoMotionTitle(
-  item: Pick<Article, "title" | "summary" | "meta_genres" | "related_actresses">
+  item: Pick<Article, "title" | "summary" | "meta_genres" | "related_actresses" | "slug">
 ) {
   const title = cleanSummary(item.title);
   const actress = item.related_actresses?.[0] ?? "";
-  const hasActress = actress && !title.includes(actress);
+  const tags = getTokyoMotionTags(item).filter((tag) => !isNoiseTag(tag));
+  const hasCuratedInfo = tags.length > 0 || Boolean(actress);
+  const seed = item.slug || title || actress || tags.join("-");
+  const composed = buildTitleFromTags(tags, actress, seed);
+  if (hasCuratedInfo && composed) return composed;
   if (title.startsWith("【") && title.includes("】")) {
-    return hasActress ? `【${actress}】${title}` : title;
+    return actress && !title.includes(actress) ? `【${actress}】${title}` : title;
   }
   if (!isThinTitle(title) && (hasJapanese(title) || title.length >= 18)) {
-    return hasActress ? `【${actress}】${title}` : title;
+    return actress && !title.includes(actress) ? `【${actress}】${title}` : title;
   }
-
-  const tags = getTokyoMotionTags(item).filter((tag) => !isNoiseTag(tag));
-  const composed = buildTitleFromTags(tags, actress);
   if (composed) return composed;
-  if (hasActress) return `【${actress}】${title}`;
+  if (actress && !title.includes(actress)) return `【${actress}】${title}`;
   return title;
 }
 
