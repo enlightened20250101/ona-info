@@ -14,7 +14,7 @@ import {
 import { buildPagination } from "@/lib/pagination";
 import HomeRankingTabs from "@/components/HomeRankingTabs";
 import { SITE } from "@/lib/site";
-import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
+import { buildActressCoverPool, resolveActressCover } from "@/lib/actressCovers";
 import {
   getJstNow,
   parsePublishedAt,
@@ -139,20 +139,21 @@ export default async function Home({
 
   const actressSlugs = topActresses.map((row) => row.actress);
   const actressCoverMap = await getActressCovers(actressSlugs);
-  const actressCoverPool = buildActressCoverPool(latestWorks);
+  const actressCoverPoolSingle = buildActressCoverPool(latestWorks, { singleOnly: true });
+  const actressCoverPoolAll = buildActressCoverPool(latestWorks);
   const popularActresses = topActresses.map((row) => ({
     slug: row.actress,
     count: row.work_count,
-    image:
-      pickDailyRandomCover(
-        row.actress,
-        actressCoverPool,
-        actressCoverMap.get(row.actress) ??
-          latestWorks.find((work) => work.related_actresses.includes(row.actress))
-            ?.images?.[0]?.url ??
-          null,
-        "home"
-      ) ?? null,
+    image: resolveActressCover(
+      row.actress,
+      actressCoverPoolSingle,
+      actressCoverPoolAll,
+      actressCoverMap.get(row.actress) ??
+        latestWorks.find((work) => work.related_actresses.includes(row.actress))
+          ?.images?.[0]?.url ??
+        null,
+      "home"
+    ),
   }));
   const upcomingWorks = latestWorks.filter((work) => isUpcomingWork(work, now));
   const heroCandidates = availableWorks.filter((work) => work.images[0]?.url);
@@ -259,7 +260,6 @@ export default async function Home({
     <div className="min-h-screen px-6 pb-16 pt-10 sm:px-10">
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <header className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[1.2fr_1fr]">

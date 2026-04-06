@@ -13,6 +13,47 @@ type FetchFanzaOptions = {
   sort?: string;
 };
 
+type FanzaApiName = {
+  name?: string | null;
+};
+
+type FanzaApiItem = {
+  content_id?: string | null;
+  product_id?: string | null;
+  goods_id?: string | null;
+  title?: string | null;
+  name?: string | null;
+  date?: string | null;
+  release_date?: string | null;
+  URL?: string | null;
+  URLS?: {
+    affiliate?: string | null;
+    pc?: string | null;
+  } | null;
+  imageURL?: {
+    large?: unknown;
+    list?: unknown;
+    small?: unknown;
+    sample?: unknown;
+  } | null;
+  sampleImageURL?: unknown;
+  prices?: {
+    price?: string | number | null;
+    list_price?: string | number | null;
+  } | null;
+  iteminfo?: {
+    actress?: FanzaApiName[] | null;
+    maker?: FanzaApiName[] | null;
+    label?: FanzaApiName[] | null;
+    genre?: FanzaApiName[] | null;
+    series?: FanzaApiName[] | null;
+  } | null;
+};
+
+function isNonEmptyString(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
 function buildLitevideoEmbedHtml(contentId: string, affiliateId: string, size: string) {
   if (!contentId || !affiliateId) return "";
   const normalizedId = contentId.trim().toLowerCase();
@@ -116,198 +157,198 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
       );
     }
 
-    const data = await response.json();
-    const items = data?.result?.items ?? [];
+    const data = (await response.json()) as { result?: { items?: FanzaApiItem[] } };
+    const items = data.result?.items ?? [];
     if (items.length === 0) break;
 
     for (const item of items) {
       const contentId = item.content_id || item.product_id || item.goods_id;
-    const title = item.title || item.name || "(untitled)";
-    const actresses = (item?.iteminfo?.actress ?? []).map((a: any) => a?.name).filter(Boolean);
-    const maker = item?.iteminfo?.maker?.[0]?.name ?? null;
-    const label = item?.iteminfo?.label?.[0]?.name ?? null;
-    const genre = (item?.iteminfo?.genre ?? []).map((g: any) => g?.name).filter(Boolean);
-    const series = item?.iteminfo?.series?.[0]?.name ?? null;
-    const releaseDate = item?.date ?? item?.release_date ?? null;
-    const normalizedContentId = String(contentId ?? "").trim().toLowerCase();
-    const isVr =
-      /^vr/i.test(normalizedContentId) || genre.some((value: string) => /vr/i.test(value));
-    if (skipVr && isVr) {
-      continue;
-    }
-
-    const apiLarge: string[] = [];
-    const apiSample: string[] = [];
-    const apiOther: string[] = [];
-    const addImage = (target: string[], value: unknown) => {
-      if (!value) return;
-      if (typeof value === "string") {
-        target.push(value);
-        return;
-      }
-      if (Array.isArray(value)) {
-        value.forEach((entry) => addImage(target, entry));
-        return;
-      }
-      if (typeof value === "object") {
-        Object.values(value as Record<string, unknown>).forEach((entry) =>
-          addImage(target, entry)
-        );
-      }
-    };
-
-    addImage(apiLarge, item?.imageURL?.large);
-    addImage(apiOther, item?.imageURL?.list);
-    addImage(apiOther, item?.imageURL?.small);
-    addImage(apiSample, item?.imageURL?.sample);
-    addImage(apiSample, item?.sampleImageURL);
-
-    const apiImages = [...apiLarge, ...apiSample, ...apiOther].filter(Boolean) as string[];
-    const hasRealImage = apiImages.some((url) => !nowPrintingPattern.test(url));
-    if (apiImages.length > 0 && !hasRealImage) {
-      continue;
-    }
-
-    const slugCandidate = String(contentId ?? "").trim().toUpperCase();
-    if (skipSlugs.has(slugCandidate)) {
-      continue;
-    }
-
-    const inferred: string[] = [];
-    const fallbackThumbs: string[] = [];
-    if (normalizedContentId) {
-      const baseAws = `https://awsimgsrc.dmm.co.jp/pics_dig/digital/video/${normalizedContentId}/${normalizedContentId}`;
-      const jpMax = Math.max(1, Math.min(20, Number(getEnv("DMM_JP_IMAGE_MAX", "10"))));
-      for (let i = 1; i <= jpMax; i += 1) {
-        inferred.push(`${baseAws}jp-${i}.jpg`);
-      }
-      const heavyThumb = `${baseAws}pl.jpg`;
-      inferred.push(heavyThumb);
-    }
-
-    let primary =
-      inferred[0] ||
-      apiLarge[0] ||
-      apiSample[0] ||
-      apiOther[0] ||
-      apiImages[0] ||
-      "";
-    const extraSources = [...inferred.slice(1), ...apiLarge, ...apiSample, ...apiOther].filter(
-      (url) => url && url !== primary
-    ) as string[];
-    const prefersAws = (url: string) => /awsimgsrc\.dmm\.co\.jp/i.test(url);
-    const lowResHost = (url: string) => /pics\.dmm\.co\.jp/i.test(url);
-    const rawUnique = Array.from(new Set([primary, ...extraSources])).filter(
-      (url) => url && !nowPrintingPattern.test(String(url))
-    ) as string[];
-    const hasAws = rawUnique.some((url) => prefersAws(url));
-    const uniqueImages = hasAws ? rawUnique.filter((url) => !lowResHost(url)) : rawUnique;
-    if (uniqueImages.length === 0) {
-      continue;
-    }
-    if (validateThumb) {
-      const primaryCandidate = inferred[0] ?? uniqueImages[0];
-      const secondary = fallbackThumbs[0];
-      let hasThumb = false;
-      let selectedThumb = "";
-      const tryUrls = [primaryCandidate, secondary].filter(Boolean) as string[];
-      for (const thumbUrl of tryUrls) {
-        try {
-          const res = await fetchWithRetry(
-            thumbUrl,
-            { headers: { "User-Agent": "av-info-mvp/1.0" }, cache: "no-store" },
-            {
-              retries: Number(getEnv("FETCH_RETRIES", "2")),
-              timeoutMs: Number(getEnv("FETCH_TIMEOUT_MS", "8000")),
-              backoffMs: Number(getEnv("FETCH_BACKOFF_MS", "800")),
-            }
-          );
-          const resolvedUrl = res.url || thumbUrl;
-          const isNowPrinting = nowPrintingPattern.test(resolvedUrl);
-          if (res.ok && !isNowPrinting) {
-            hasThumb = true;
-            selectedThumb = thumbUrl;
-            break;
-          }
-        } catch {
-          // ignore
-        }
-      }
-      if (!hasThumb) {
+      const title = item.title || item.name || "(untitled)";
+      const actresses = (item.iteminfo?.actress ?? []).map((a) => a?.name).filter(isNonEmptyString);
+      const maker = item.iteminfo?.maker?.[0]?.name ?? null;
+      const label = item.iteminfo?.label?.[0]?.name ?? null;
+      const genre = (item.iteminfo?.genre ?? []).map((g) => g?.name).filter(isNonEmptyString);
+      const series = item.iteminfo?.series?.[0]?.name ?? null;
+      const releaseDate = item.date ?? item.release_date ?? null;
+      const normalizedContentId = String(contentId ?? "").trim().toLowerCase();
+      const isVr =
+        /^vr/i.test(normalizedContentId) || genre.some((value: string) => /vr/i.test(value));
+      if (skipVr && isVr) {
         continue;
       }
-      if (selectedThumb) {
-        primary = selectedThumb;
-      }
-    }
-    const images = uniqueImages.slice(0, 10).map((url: string, idx: number) => ({
-      url,
-      alt: `${title} ${idx + 1}`,
-    }));
 
-    // 価格情報の抽出（セール判定用）
-    const rawPrice = item?.prices?.price;
-    const rawListPrice = item?.prices?.list_price;
-    const parsedPrice = rawPrice ? Number(String(rawPrice).replace(/[^0-9]/g, "")) : null;
-    const parsedListPrice = rawListPrice ? Number(String(rawListPrice).replace(/[^0-9]/g, "")) : null;
-    const price = parsedPrice && !isNaN(parsedPrice) ? parsedPrice : null;
-    const listPrice = parsedListPrice && !isNaN(parsedListPrice) ? parsedListPrice : null;
-
-    const canonicalUrl = item?.URL || item?.URLS?.affiliate || item?.URLS?.pc;
-    const affiliateUrl = item?.URLS?.affiliate ?? null;
-    let embedHtml: string | null = null;
-    if (embedAffiliateId && contentId) {
-      embedHtml = buildLitevideoEmbedHtml(String(contentId), embedAffiliateId, embedSize) || null;
-    }
-    if (embedHtml && validateEmbed) {
-      try {
-        const embedUrlMatch = embedHtml.match(/src="([^"]+)"/i);
-        const embedUrl = embedUrlMatch?.[1];
-        if (embedUrl) {
-          const embedResponse = await fetchWithRetry(
-            embedUrl,
-            { headers: { "User-Agent": "av-info-mvp/1.0" }, cache: "no-store" },
-            {
-              retries: Number(getEnv("FETCH_RETRIES", "2")),
-              timeoutMs: Number(getEnv("FETCH_TIMEOUT_MS", "8000")),
-              backoffMs: Number(getEnv("FETCH_BACKOFF_MS", "800")),
-            }
+      const apiLarge: string[] = [];
+      const apiSample: string[] = [];
+      const apiOther: string[] = [];
+      const addImage = (target: string[], value: unknown) => {
+        if (!value) return;
+        if (typeof value === "string") {
+          target.push(value);
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach((entry) => addImage(target, entry));
+          return;
+        }
+        if (typeof value === "object") {
+          Object.values(value as Record<string, unknown>).forEach((entry) =>
+            addImage(target, entry)
           );
-          const html = await embedResponse.text();
-          const isMissing =
-            !embedResponse.ok ||
-            /404 Not Found/i.test(html) ||
-            /指定されたページが見つかりません/i.test(html) ||
-            /class="css-dq90ix"/i.test(html) ||
-            /サイトトップへ/i.test(html);
-          if (isMissing) {
-            embedHtml = "";
+        }
+      };
+
+      addImage(apiLarge, item.imageURL?.large);
+      addImage(apiOther, item.imageURL?.list);
+      addImage(apiOther, item.imageURL?.small);
+      addImage(apiSample, item.imageURL?.sample);
+      addImage(apiSample, item.sampleImageURL);
+
+      const apiImages = [...apiLarge, ...apiSample, ...apiOther].filter(Boolean) as string[];
+      const hasRealImage = apiImages.some((url) => !nowPrintingPattern.test(url));
+      if (apiImages.length > 0 && !hasRealImage) {
+        continue;
+      }
+
+      const slugCandidate = String(contentId ?? "").trim().toUpperCase();
+      if (skipSlugs.has(slugCandidate)) {
+        continue;
+      }
+
+      const inferred: string[] = [];
+      const fallbackThumbs: string[] = [];
+      if (normalizedContentId) {
+        const baseAws = `https://awsimgsrc.dmm.co.jp/pics_dig/digital/video/${normalizedContentId}/${normalizedContentId}`;
+        const jpMax = Math.max(1, Math.min(20, Number(getEnv("DMM_JP_IMAGE_MAX", "10"))));
+        for (let i = 1; i <= jpMax; i += 1) {
+          inferred.push(`${baseAws}jp-${i}.jpg`);
+        }
+        const heavyThumb = `${baseAws}pl.jpg`;
+        inferred.push(heavyThumb);
+      }
+
+      let primary =
+        inferred[0] ||
+        apiLarge[0] ||
+        apiSample[0] ||
+        apiOther[0] ||
+        apiImages[0] ||
+        "";
+      const extraSources = [...inferred.slice(1), ...apiLarge, ...apiSample, ...apiOther].filter(
+        (url) => url && url !== primary
+      ) as string[];
+      const prefersAws = (url: string) => /awsimgsrc\.dmm\.co\.jp/i.test(url);
+      const lowResHost = (url: string) => /pics\.dmm\.co\.jp/i.test(url);
+      const rawUnique = Array.from(new Set([primary, ...extraSources])).filter(
+        (url) => url && !nowPrintingPattern.test(String(url))
+      ) as string[];
+      const hasAws = rawUnique.some((url) => prefersAws(url));
+      const uniqueImages = hasAws ? rawUnique.filter((url) => !lowResHost(url)) : rawUnique;
+      if (uniqueImages.length === 0) {
+        continue;
+      }
+      if (validateThumb) {
+        const primaryCandidate = inferred[0] ?? uniqueImages[0];
+        const secondary = fallbackThumbs[0];
+        let hasThumb = false;
+        let selectedThumb = "";
+        const tryUrls = [primaryCandidate, secondary].filter(Boolean) as string[];
+        for (const thumbUrl of tryUrls) {
+          try {
+            const res = await fetchWithRetry(
+              thumbUrl,
+              { headers: { "User-Agent": "av-info-mvp/1.0" }, cache: "no-store" },
+              {
+                retries: Number(getEnv("FETCH_RETRIES", "2")),
+                timeoutMs: Number(getEnv("FETCH_TIMEOUT_MS", "8000")),
+                backoffMs: Number(getEnv("FETCH_BACKOFF_MS", "800")),
+              }
+            );
+            const resolvedUrl = res.url || thumbUrl;
+            const isNowPrinting = nowPrintingPattern.test(resolvedUrl);
+            if (res.ok && !isNowPrinting) {
+              hasThumb = true;
+              selectedThumb = thumbUrl;
+              break;
+            }
+          } catch {
+            // ignore
           }
         }
-      } catch {
-        // Ignore embed validation failure.
+        if (!hasThumb) {
+          continue;
+        }
+        if (selectedThumb) {
+          primary = selectedThumb;
+        }
       }
-    }
+      const images = uniqueImages.slice(0, 10).map((url: string, idx: number) => ({
+        url,
+        alt: `${title} ${idx + 1}`,
+      }));
 
-    results.push({
-      content_id: String(contentId),
-      title: String(title),
-      actresses,
-      maker,
-      label,
-      genre,
-      series,
-      release_date: releaseDate,
-      images,
-      canonical_url: String(canonicalUrl),
-      affiliate_url: affiliateUrl,
-      embed_html: embedHtml,
-      fetched_at: fetchedAt,
-      price,
-      list_price: listPrice,
-    } satisfies RawFanzaWork);
+    // 価格情報の抽出（セール判定用）
+      const rawPrice = item.prices?.price;
+      const rawListPrice = item.prices?.list_price;
+      const parsedPrice = rawPrice ? Number(String(rawPrice).replace(/[^0-9]/g, "")) : null;
+      const parsedListPrice = rawListPrice ? Number(String(rawListPrice).replace(/[^0-9]/g, "")) : null;
+      const price = parsedPrice && !isNaN(parsedPrice) ? parsedPrice : null;
+      const listPrice = parsedListPrice && !isNaN(parsedListPrice) ? parsedListPrice : null;
 
-    if (stopWhenTargetReached && results.length >= targetNew) break;
+      const canonicalUrl = item.URL || item.URLS?.affiliate || item.URLS?.pc;
+      const affiliateUrl = item.URLS?.affiliate ?? null;
+      let embedHtml: string | null = null;
+      if (embedAffiliateId && contentId) {
+        embedHtml = buildLitevideoEmbedHtml(String(contentId), embedAffiliateId, embedSize) || null;
+      }
+      if (embedHtml && validateEmbed) {
+        try {
+          const embedUrlMatch = embedHtml.match(/src="([^"]+)"/i);
+          const embedUrl = embedUrlMatch?.[1];
+          if (embedUrl) {
+            const embedResponse = await fetchWithRetry(
+              embedUrl,
+              { headers: { "User-Agent": "av-info-mvp/1.0" }, cache: "no-store" },
+              {
+                retries: Number(getEnv("FETCH_RETRIES", "2")),
+                timeoutMs: Number(getEnv("FETCH_TIMEOUT_MS", "8000")),
+                backoffMs: Number(getEnv("FETCH_BACKOFF_MS", "800")),
+              }
+            );
+            const html = await embedResponse.text();
+            const isMissing =
+              !embedResponse.ok ||
+              /404 Not Found/i.test(html) ||
+              /指定されたページが見つかりません/i.test(html) ||
+              /class="css-dq90ix"/i.test(html) ||
+              /サイトトップへ/i.test(html);
+            if (isMissing) {
+              embedHtml = "";
+            }
+          }
+        } catch {
+          // Ignore embed validation failure.
+        }
+      }
+
+      results.push({
+        content_id: String(contentId),
+        title: String(title),
+        actresses,
+        maker,
+        label,
+        genre,
+        series,
+        release_date: releaseDate,
+        images,
+        canonical_url: String(canonicalUrl),
+        affiliate_url: affiliateUrl,
+        embed_html: embedHtml,
+        fetched_at: fetchedAt,
+        price,
+        list_price: listPrice,
+      } satisfies RawFanzaWork);
+
+      if (stopWhenTargetReached && results.length >= targetNew) break;
     }
 
     offset += perPage;

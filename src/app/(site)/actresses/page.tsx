@@ -3,8 +3,8 @@ import SafeImage from "@/components/SafeImage";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { buildPagination } from "@/lib/pagination";
-import { getActressCovers, getActressStats, getLatestByType } from "@/lib/db";
-import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
+import { getActressStats, getLatestByType } from "@/lib/db";
+import { getActressCardCoverMap } from "@/lib/actressCardCovers";
 import { SITE } from "@/lib/site";
 import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
@@ -18,25 +18,14 @@ export async function generateMetadata({
   const sp = await searchParams;
   const query = (sp.q ?? "").trim().toLowerCase();
   const works = await getLatestByType("work", 200);
-  const coverPoolSingle = buildActressCoverPool(works, { singleOnly: true });
-  const coverPoolAll = buildActressCoverPool(works);
   const stats = await getActressStats(10000);
   const actresses = stats.map((row) => row.actress);
   const filtered = query
     ? actresses.filter((slug) => slug.toLowerCase().includes(query))
     : actresses;
   const topSlug = filtered[0] ?? null;
-  const coverMap = topSlug ? await getActressCovers([topSlug]) : new Map();
-  const previewImage =
-    topSlug
-      ? pickDailyRandomCover(
-          topSlug,
-          coverPoolSingle,
-          null,
-          "actresses-og-single"
-        ) ??
-        pickDailyRandomCover(topSlug, coverPoolAll, coverMap.get(topSlug) ?? null, "actresses-og")
-      : null;
+  const coverMap = topSlug ? await getActressCardCoverMap([topSlug], works, "actresses-og") : new Map();
+  const previewImage = topSlug ? coverMap.get(topSlug) ?? null : null;
   const previewUrl =
     previewImage && !isLikelyInvalidImageUrl(previewImage) ? previewImage : undefined;
   const noindex = filtered.length === 0;
@@ -127,23 +116,10 @@ export default async function ActressesPage({
     ],
   };
 
-  const coverMap = await getActressCovers(pageItems);
-  const worksByActressSingle = buildActressCoverPool(works, { singleOnly: true });
-  const worksByActressAll = buildActressCoverPool(works);
+  const coverMap = await getActressCardCoverMap(pageItems, works, "actresses-list");
   const primaryImage =
     pageItems[0] && coverMap.size > 0
-      ? pickDailyRandomCover(
-          pageItems[0],
-          worksByActressSingle,
-          null,
-          "actresses-primary-single"
-        ) ??
-        pickDailyRandomCover(
-          pageItems[0],
-          worksByActressAll,
-          coverMap.get(pageItems[0]) ?? null,
-          "actresses-primary"
-        )
+      ? coverMap.get(pageItems[0]) ?? null
       : null;
   const primaryUrl =
     primaryImage && !isLikelyInvalidImageUrl(primaryImage) ? primaryImage : undefined;
@@ -166,17 +142,14 @@ export default async function ActressesPage({
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(listLd) }}
       />
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -219,14 +192,7 @@ export default async function ActressesPage({
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {pageItems.map((slug) => {
-                const cover =
-                  pickDailyRandomCover(
-                    slug,
-                    worksByActressSingle,
-                    null,
-                    "single-only"
-                  ) ??
-                  pickDailyRandomCover(slug, worksByActressAll, coverMap.get(slug) ?? null);
+                const cover = coverMap.get(slug) ?? null;
                 return (
                   <Link
                     key={slug}

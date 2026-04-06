@@ -5,6 +5,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { extractTags, normalizeTag, tagLabel } from "@/lib/tagging";
 import { buildPagination } from "@/lib/pagination";
 import {
+  getLatestByType,
   getLatestArticlesLite,
   getWorksByMetaTagPageLite,
   searchArticlesPageLite,
@@ -13,6 +14,7 @@ import { shouldBypassNextImage } from "@/lib/image";
 import SearchHistoryClient from "@/app/(site)/search/SearchHistoryClient";
 import { Article } from "@/lib/schema";
 import { SITE } from "@/lib/site";
+import { getActressCardCoverMap } from "@/lib/actressCardCovers";
 
 export const dynamic = "force-dynamic";
 
@@ -214,6 +216,16 @@ export default async function SearchPage({
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * perPage;
+  const actressResultSlugs = pageItems
+    .filter((article) => article.type === "actress")
+    .map((article) => article.slug)
+    .filter(Boolean);
+  const actressWorks = actressResultSlugs.length > 0 ? await getLatestByType("work", 200) : [];
+  const actressCoverMap = await getActressCardCoverMap(
+    actressResultSlugs,
+    actressWorks,
+    "search-actress"
+  );
   const baseParams = new URLSearchParams();
   if (sp.q) baseParams.set("q", sp.q);
   if (sp.type) baseParams.set("type", sp.type);
@@ -349,6 +361,8 @@ export default async function SearchPage({
                 const cover =
                   article.type === "work" || article.type === "tokyomotion"
                     ? article.images?.[0]?.url
+                    : article.type === "actress"
+                      ? actressCoverMap.get(article.slug) ?? null
                     : null;
                 const displayType = article.type === "tokyomotion" ? "work" : article.type;
                 const hrefPrefix =

@@ -17,17 +17,59 @@ const parser = new XMLParser({
   trimValues: true,
 });
 
-function extractText(value: any) {
+type XmlTextNode = {
+  "#text"?: string;
+  text?: string;
+};
+
+type AtomLinkNode = {
+  rel?: string;
+  href?: string;
+} & XmlTextNode;
+
+type RssItemNode = {
+  title?: unknown;
+  link?: unknown;
+  description?: unknown;
+  pubDate?: unknown;
+  date?: unknown;
+};
+
+type AtomEntryNode = {
+  title?: unknown;
+  link?: AtomLinkNode | AtomLinkNode[] | string;
+  summary?: unknown;
+  content?: unknown;
+  updated?: unknown;
+  published?: unknown;
+};
+
+type ParsedFeed = {
+  rss?: {
+    channel?: {
+      item?: RssItemNode | RssItemNode[];
+    };
+  };
+  channel?: {
+    item?: RssItemNode | RssItemNode[];
+  };
+  feed?: {
+    entry?: AtomEntryNode | AtomEntryNode[];
+  };
+};
+
+function extractText(value: unknown) {
   if (!value) return "";
   if (typeof value === "string") return value;
   if (typeof value === "number") return String(value);
   if (typeof value === "object") {
-    return value["#text"] ?? value.text ?? "";
+    const node = value as XmlTextNode;
+    return node["#text"] ?? node.text ?? "";
   }
   return "";
 }
 
-function normalizeLink(value: any) {
+function normalizeLink(value: AtomEntryNode["link"]) {
   if (!value) return "";
   if (typeof value === "string") return value;
   if (Array.isArray(value)) {
@@ -40,11 +82,11 @@ function normalizeLink(value: any) {
   return "";
 }
 
-function parseRssItems(feed: any) {
+function parseRssItems(feed: ParsedFeed) {
   const channel = feed?.rss?.channel ?? feed?.channel;
   if (!channel) return [];
   const items = channel.item ? (Array.isArray(channel.item) ? channel.item : [channel.item]) : [];
-  return items.map((item: any) => ({
+  return items.map((item) => ({
     title: extractText(item.title),
     link: extractText(item.link),
     summary: extractText(item.description),
@@ -52,9 +94,9 @@ function parseRssItems(feed: any) {
   }));
 }
 
-function parseAtomEntries(feed: any) {
+function parseAtomEntries(feed: ParsedFeed) {
   const entries = feed?.feed?.entry ? (Array.isArray(feed.feed.entry) ? feed.feed.entry : [feed.feed.entry]) : [];
-  return entries.map((entry: any) => ({
+  return entries.map((entry) => ({
     title: extractText(entry.title),
     link: normalizeLink(entry.link),
     summary: extractText(entry.summary) || extractText(entry.content),
@@ -93,7 +135,7 @@ export async function fetchRssTopics(): Promise<RawRssItem[]> {
     }
 
     const xml = await response.text();
-    const parsed = parser.parse(xml);
+    const parsed = parser.parse(xml) as ParsedFeed;
     const items = [...parseRssItems(parsed), ...parseAtomEntries(parsed)].filter(
       (item) => item.title && item.link
     );

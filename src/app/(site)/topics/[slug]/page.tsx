@@ -5,7 +5,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { extractTags, tagKeywords, tagLabel } from "@/lib/tagging";
 import { getArticleBySlug, getArticlesBySlugs, getLatestByTypePage } from "@/lib/db";
 import { SITE } from "@/lib/site";
-import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
+import { getActressCardCoverMap } from "@/lib/actressCardCovers";
 import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 
 export const dynamic = "force-dynamic";
@@ -82,9 +82,9 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
   }
 
   const latestWorks = (await getLatestByTypePage("work", 1, 60)).items;
-  const actressCoverPool = buildActressCoverPool(latestWorks);
   const relatedWorks = await getArticlesBySlugs("work", article.related_works);
   const relatedActresses = article.related_actresses;
+  const actressCoverMap = await getActressCardCoverMap(relatedActresses, latestWorks, "topic");
   const tags = extractTags(`${article.title} ${article.summary}`);
   const keywordPool = tags.flatMap(tagKeywords);
   const about = tags.map((tag) => ({
@@ -132,7 +132,6 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -222,7 +221,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
             <h2 className="text-lg font-semibold">関連女優</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {relatedActresses.map((actressSlug) => {
-                const cover = pickDailyRandomCover(actressSlug, actressCoverPool, null, "topic");
+                const cover = actressCoverMap.get(actressSlug) ?? null;
                 return (
                   <Link
                     key={actressSlug}

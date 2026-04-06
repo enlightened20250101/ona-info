@@ -1,5 +1,14 @@
-require("dotenv").config({ path: require("path").join(process.cwd(), ".env.local") });
-const { createClient } = require("@supabase/supabase-js");
+import dotenv from "dotenv";
+import path from "path";
+import { createClient } from "@supabase/supabase-js";
+
+dotenv.config({ path: path.join(process.cwd(), ".env.local") });
+
+type WorkRow = {
+  id: string;
+  slug: string;
+  published_at: string;
+};
 
 function getSupabaseKey() {
   return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -9,7 +18,7 @@ function getJstNow() {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
 }
 
-function parsePublishedAt(iso) {
+function parsePublishedAt(iso: string) {
   if (!iso) return null;
   const trimmed = String(iso).trim();
   const dateOnly = /^\d{4}[-/]\d{2}[-/]\d{2}$/;
@@ -49,7 +58,7 @@ async function run() {
     .limit(600);
   if (error) throw error;
 
-  const works = data || [];
+  const works = (data ?? []) as WorkRow[];
   const dailyPool = works.filter((work) => {
     const published = parsePublishedAt(work.published_at);
     return published ? published.getTime() >= now.getTime() - 48 * 60 * 60 * 1000 : false;
@@ -59,16 +68,16 @@ async function run() {
   console.log(`works fetched: ${works.length}`);
   console.log(`dailyPool: ${dailyPool.length}`);
   console.log("latest 5 published_at:");
-  works.slice(0, 5).forEach((w, i) => {
-    console.log(`${i + 1}. ${w.slug} | ${w.published_at}`);
+  works.slice(0, 5).forEach((work, index) => {
+    console.log(`${index + 1}. ${work.slug} | ${work.published_at}`);
   });
   console.log("daily pool sample (up to 5):");
-  dailyPool.slice(0, 5).forEach((w, i) => {
-    console.log(`${i + 1}. ${w.slug} | ${w.published_at}`);
+  dailyPool.slice(0, 5).forEach((work, index) => {
+    console.log(`${index + 1}. ${work.slug} | ${work.published_at}`);
   });
 }
 
-run().catch((err) => {
-  console.error(err);
+run().catch((error: unknown) => {
+  console.error(error);
   process.exit(1);
 });

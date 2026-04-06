@@ -108,7 +108,7 @@ function parsePublishedAt(value: unknown) {
     const raw = value.trim();
     const plainMatch = raw.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
     if (plainMatch) {
-      const [_, y, m, d] = plainMatch;
+      const [, y, m, d] = plainMatch;
       return new Date(`${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}T00:00:00+09:00`);
     }
     const parsed = new Date(raw);
@@ -674,7 +674,7 @@ async function refreshActressStatsSafe() {
   try {
     await refreshSiteStats();
     logLine("Actress stats refreshed.");
-  } catch (error) {
+  } catch {
     try {
       await refreshActressStats();
       logLine("Actress stats refreshed (fallback).");

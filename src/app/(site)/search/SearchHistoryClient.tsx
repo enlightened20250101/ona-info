@@ -9,35 +9,32 @@ type Props = {
   query: string;
 };
 
+function readStoredItems() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function SearchHistoryClient({ query }: Props) {
-  const [items, setItems] = useState<string[]>([]);
+  const [items, setItems] = useState<string[]>(() =>
+    typeof window === "undefined" ? [] : readStoredItems()
+  );
+  const trimmedQuery = query.trim();
+  const displayItems = useMemo(() => {
+    if (!trimmedQuery) return items;
+    return [trimmedQuery, ...items.filter((item) => item !== trimmedQuery)].slice(0, 8);
+  }, [items, trimmedQuery]);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setItems(parsed);
-        }
-      }
-    } catch {
-      setItems([]);
-    }
-  }, []);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(displayItems));
+  }, [displayItems]);
 
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (!trimmed) return;
-
-    setItems((prev) => {
-      const next = [trimmed, ...prev.filter((item) => item !== trimmed)].slice(0, 8);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, [query]);
-
-  const hasItems = useMemo(() => items.length > 0, [items]);
+  const hasItems = useMemo(() => displayItems.length > 0, [displayItems]);
 
   if (!hasItems) return null;
 
@@ -57,7 +54,7 @@ export default function SearchHistoryClient({ query }: Props) {
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {items.map((item) => (
+        {displayItems.map((item) => (
           <Link
             key={item}
             href={`/search?q=${encodeURIComponent(item)}`}

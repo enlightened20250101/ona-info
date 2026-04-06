@@ -5,7 +5,6 @@ import { Suspense } from "react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { AffiliateEmbed } from "@/components/AffiliateEmbed";
 import { extractTags, tagKeywords, tagLabel } from "@/lib/tagging";
-import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
 import {
   findWorksByActressSlug,
   getArticleBySlug,
@@ -20,6 +19,7 @@ import { Article } from "@/lib/schema";
 import { getJstNow, parsePublishedAt } from "@/lib/releaseDate";
 import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
 import { buildTokyoMotionDescription } from "@/lib/eroterest";
+import { getActressCardCoverMap } from "@/lib/actressCardCovers";
 
 export const dynamic = "force-dynamic";
 
@@ -321,17 +321,14 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
     <div className="min-h-screen px-6 pb-28 pt-12 sm:px-10">
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(videoLd) }}
       />
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -670,7 +667,11 @@ async function RelatedSections({
     12,
     `recent-${article.slug}`
   );
-  const actressCoverPool = buildActressCoverPool(latestWorks);
+  const actressCoverMap = await getActressCardCoverMap(
+    article.related_actresses,
+    latestWorks,
+    "work-related"
+  );
   const sameGenreWorks = sameGenre
     ? pickDailyRandom(
         sameGenreResult
@@ -749,7 +750,6 @@ async function RelatedSections({
       {relatedItemList ? (
         <script
           type="application/ld+json"
-          // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: JSON.stringify(relatedItemList) }}
         />
       ) : null}
@@ -758,9 +758,7 @@ async function RelatedSections({
           <h2 className="text-lg font-semibold">関連女優</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {article.related_actresses.map((slug) => {
-              const cover =
-                pickDailyRandomCover(slug, actressCoverPool, fallbackCover, "work-related") ??
-                fallbackCover;
+              const cover = actressCoverMap.get(slug) ?? fallbackCover;
               return (
                 <Link
                   key={slug}

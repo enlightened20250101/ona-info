@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import fs from "fs";
 import path from "path";
 import { google } from "googleapis";
 import { createClient } from "@supabase/supabase-js";
@@ -42,7 +43,6 @@ function readServiceAccount(): { client_email: string; private_key: string } {
   const filePath = fileEnv
     ? path.resolve(process.cwd(), fileEnv)
     : path.join(process.cwd(), "service_account.json");
-  const fs = require("fs");
   if (fs.existsSync(filePath)) {
     return JSON.parse(fs.readFileSync(filePath, "utf-8"));
   }

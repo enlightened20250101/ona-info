@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type EmbedInfo = {
@@ -113,7 +114,7 @@ export function AffiliateEmbed({
       restore();
       script.remove();
     };
-  }, [embed?.kind, embed?.scriptId, embed?.scriptSrc]);
+  }, [embed]);
 
   if (!embed) return null;
 
@@ -138,14 +139,22 @@ export function AffiliateEmbed({
         }
       `}</style>
       {showFallback ? (
-        <a href={fallbackUrl ?? "#"} rel="sponsored noopener noreferrer" target="_blank">
-          <img
-            src={fallbackImage ?? ""}
-            alt={fallbackAlt ?? "FANZA動画"}
-            className="w-full rounded-2xl"
-            loading="lazy"
-            decoding="async"
-          />
+        <a
+          href={fallbackUrl ?? "#"}
+          rel="sponsored noopener noreferrer"
+          target="_blank"
+          className="block overflow-hidden rounded-2xl"
+        >
+          <div className="relative aspect-[4/3] w-full">
+            <Image
+              src={fallbackImage ?? ""}
+              alt={fallbackAlt ?? "FANZA動画"}
+              fill
+              sizes="100vw"
+              className="object-cover"
+              unoptimized
+            />
+          </div>
         </a>
       ) : showFallbackButton ? (
         <a

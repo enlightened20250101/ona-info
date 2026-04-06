@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 export default function RouteProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [pending, setPending] = useState(false);
+  const pendingRef = useRef(pending);
+
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
 
   useEffect(() => {
     if (pending) {
@@ -17,9 +22,9 @@ export default function RouteProgress() {
   }, [pending]);
 
   useEffect(() => {
-    if (!pending) return;
-    setPending(false);
-  }, [pathname, searchParams, pending]);
+    if (!pendingRef.current) return;
+    window.setTimeout(() => setPending(false), 0);
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {

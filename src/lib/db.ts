@@ -183,9 +183,9 @@ type Database = {
         };
       };
     };
-    Functions: {};
-    Enums: {};
-    CompositeTypes: {};
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 };
 
@@ -425,11 +425,27 @@ export async function insertTokyoMotionIfNew(
   return { status: "inserted" as const };
 }
 
-function applyTokyoPublishFilter<T>(query: T) {
-  return (query as any)
+type TokyoPublishFilterQuery<T> = {
+  eq(column: string, value: string | boolean): T;
+};
+
+function applyTokyoPublishFilter<T extends TokyoPublishFilterQuery<T>>(query: T) {
+  return query
     .eq("approval_status", "approved")
     .eq("curation_ready", true);
 }
+
+type OrderedQuery<T> = {
+  order(column: string, options: { ascending: boolean }): T;
+};
+
+type TypedQuery<T> = {
+  eq(column: string, value: string): T;
+};
+
+type BeforeQuery<T> = {
+  lte(column: string, value: string): T;
+};
 
 export async function getLatestArticles(limit = 30) {
   const client = getSupabase();
@@ -861,7 +877,7 @@ export async function searchArticlesPage(options: {
   const rawQuery = options.query.trim();
   const query = rawQuery.replace(/%/g, "\\%").replace(/_/g, "\\_");
 
-  const applyOrdering = <T>(builder: T & { order: Function }) => {
+  const applyOrdering = <T extends OrderedQuery<T>>(builder: T) => {
     if (options.order === "oldest") {
       return builder.order("published_at", { ascending: true });
     }
@@ -871,11 +887,11 @@ export async function searchArticlesPage(options: {
     return builder.order("published_at", { ascending: false });
   };
 
-  const applyType = <T>(builder: T & { eq: Function }) => {
+  const applyType = <T extends TypedQuery<T>>(builder: T) => {
     if (!options.type) return builder;
     return builder.eq("type", options.type);
   };
-  const applyBefore = <T>(builder: T & { lte: Function }) => {
+  const applyBefore = <T extends BeforeQuery<T>>(builder: T) => {
     if (!options.beforeIso) return builder;
     return builder.lte("published_at", options.beforeIso);
   };
@@ -935,7 +951,7 @@ export async function searchArticlesPageLite(options: {
   const rawQuery = options.query.trim();
   const query = rawQuery.replace(/%/g, "\\%").replace(/_/g, "\\_");
 
-  const applyOrdering = <T>(builder: T & { order: Function }) => {
+  const applyOrdering = <T extends OrderedQuery<T>>(builder: T) => {
     if (options.order === "oldest") {
       return builder.order("published_at", { ascending: true });
     }
@@ -945,11 +961,11 @@ export async function searchArticlesPageLite(options: {
     return builder.order("published_at", { ascending: false });
   };
 
-  const applyType = <T>(builder: T & { eq: Function }) => {
+  const applyType = <T extends TypedQuery<T>>(builder: T) => {
     if (!options.type) return builder;
     return builder.eq("type", options.type);
   };
-  const applyBefore = <T>(builder: T & { lte: Function }) => {
+  const applyBefore = <T extends BeforeQuery<T>>(builder: T) => {
     if (!options.beforeIso) return builder;
     return builder.lte("published_at", options.beforeIso);
   };
@@ -1527,7 +1543,7 @@ export async function getTopTags(limit = 20) {
   return (data ?? []) as TagStat[];
 }
 
-export async function getPopularTagsFromTopics(limit = 20) {
+export async function getPopularTagsFromTopics() {
   const client = getSupabase();
   const { data, error } = await client
     .from("articles")

@@ -117,12 +117,6 @@ function extractTags(html: string) {
   return tags;
 }
 
-function extractThumb(html: string) {
-  const match = html.match(/<img[^>]+src="([^"]+\/tmb[^"]+)"/i);
-  if (match) return match[1];
-  return extractMetaContent(html, "og:image") || null;
-}
-
 function extractPublishedAt(html: string) {
   const match = html.match(/<meta[^>]+property=["']video:release_date["'][^>]+content=["']([^"']+)["']/i);
   if (match) return match[1];

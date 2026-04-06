@@ -10,6 +10,28 @@ export type FanzaMetadata = {
   genre: string[];
 };
 
+type FanzaApiName = {
+  name?: string | null;
+};
+
+type FanzaApiItem = {
+  content_id?: string | null;
+  product_id?: string | null;
+  goods_id?: string | null;
+  title?: string | null;
+  name?: string | null;
+  iteminfo?: {
+    actress?: FanzaApiName[] | null;
+    maker?: FanzaApiName[] | null;
+    label?: FanzaApiName[] | null;
+    genre?: FanzaApiName[] | null;
+  } | null;
+};
+
+function isNonEmptyString(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
 function buildCommonParams() {
   const apiId = getEnv("DMM_API_ID", "");
   const affiliateId = getEnv("DMM_AFFILIATE_ID", "");
@@ -62,8 +84,8 @@ async function requestFanza(params: URLSearchParams) {
     throw new Error(`FANZA API error: ${response.status} ${response.statusText} ${text}`);
   }
 
-  const data = await response.json();
-  return data?.result?.items?.[0] ?? null;
+  const data = (await response.json()) as { result?: { items?: FanzaApiItem[] } };
+  return data.result?.items?.[0] ?? null;
 }
 
 export async function fetchFanzaByCode(code: string): Promise<FanzaMetadata | null> {
@@ -86,12 +108,12 @@ export async function fetchFanzaByCode(code: string): Promise<FanzaMetadata | nu
 
   const contentId = item.content_id || item.product_id || item.goods_id || normalized;
   const title = item.title || item.name || normalized;
-  const actresses = (item?.iteminfo?.actress ?? [])
-    .map((a: any) => a?.name)
-    .filter(Boolean);
-  const maker = item?.iteminfo?.maker?.[0]?.name ?? null;
-  const label = item?.iteminfo?.label?.[0]?.name ?? null;
-  const genre = (item?.iteminfo?.genre ?? []).map((g: any) => g?.name).filter(Boolean);
+  const actresses = (item.iteminfo?.actress ?? [])
+    .map((a) => a?.name)
+    .filter(isNonEmptyString);
+  const maker = item.iteminfo?.maker?.[0]?.name ?? null;
+  const label = item.iteminfo?.label?.[0]?.name ?? null;
+  const genre = (item.iteminfo?.genre ?? []).map((g) => g?.name).filter(isNonEmptyString);
 
   return {
     content_id: String(contentId),

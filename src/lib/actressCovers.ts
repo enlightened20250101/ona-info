@@ -47,3 +47,18 @@ export function pickDailyRandomCover(
   const index = Math.floor(rand() * candidates.length);
   return candidates[index] ?? fallback;
 }
+
+export function resolveActressCover(
+  slug: string,
+  singlePool: Map<string, string[]>,
+  allPool: Map<string, string[]>,
+  fallback: string | null = null,
+  keyPrefix = "actress"
+) {
+  return (
+    pickDailyRandomCover(slug, singlePool, null, `${keyPrefix}-single`) ??
+    fallback ??
+    pickDailyRandomCover(slug, allPool, null, keyPrefix) ??
+    fallback
+  );
+}

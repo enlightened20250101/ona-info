@@ -2,33 +2,23 @@ import Link from "next/link";
 import SafeImage from "@/components/SafeImage";
 import { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { getActressCovers, getActressRanking, getLatestByType } from "@/lib/db";
-import { buildActressCoverPool, pickDailyRandomCover } from "@/lib/actressCovers";
+import { getActressRanking, getLatestByType } from "@/lib/db";
+import { getActressCardCoverMap } from "@/lib/actressCardCovers";
 import { SITE } from "@/lib/site";
 import { isLikelyInvalidImageUrl, shouldBypassNextImage } from "@/lib/image";
-import { Article } from "@/lib/schema";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const works = await getLatestByType("work", 200);
   const rankingStats = await getActressRanking(1);
-  const coverMap = await getActressCovers(rankingStats.map((row) => row.actress));
-  const coverPoolSingle = buildActressCoverPool(works, { singleOnly: true });
-  const coverPoolAll = buildActressCoverPool(works);
+  const coverMap = await getActressCardCoverMap(
+    rankingStats.map((row) => row.actress),
+    works,
+    "ranking-og"
+  );
   const topSlug = rankingStats[0]?.actress ?? null;
-  const previewImage =
-    topSlug
-      ? pickDailyRandomCover(topSlug, coverPoolSingle, null, "ranking-og-single") ??
-        pickDailyRandomCover(
-          topSlug,
-          coverPoolAll,
-          coverMap.get(topSlug) ??
-            works.find((work: Article) => work.related_actresses.includes(topSlug))?.images?.[0]?.url ??
-            null,
-          "ranking-og"
-        )
-      : null;
+  const previewImage = topSlug ? coverMap.get(topSlug) ?? null : null;
   const previewUrl =
     previewImage && !isLikelyInvalidImageUrl(previewImage) ? previewImage : undefined;
 
@@ -50,23 +40,15 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ActressRankingPage() {
   const works = await getLatestByType("work", 200);
   const rankingStats = await getActressRanking(50);
-  const coverMap = await getActressCovers(rankingStats.map((row) => row.actress));
-  const coverPoolSingle = buildActressCoverPool(works, { singleOnly: true });
-  const coverPoolAll = buildActressCoverPool(works);
+  const coverMap = await getActressCardCoverMap(
+    rankingStats.map((row) => row.actress),
+    works,
+    "ranking"
+  );
   const ranking = rankingStats.map((row) => ({
     slug: row.actress,
     count: row.work_count,
-    image:
-      pickDailyRandomCover(row.actress, coverPoolSingle, null, "ranking-single") ??
-      pickDailyRandomCover(
-        row.actress,
-        coverPoolAll,
-        coverMap.get(row.actress) ??
-          works.find((work: Article) => work.related_actresses.includes(row.actress))?.images?.[0]?.url ??
-          null,
-        "ranking"
-      ) ??
-      null,
+    image: coverMap.get(row.actress) ?? null,
   }));
 
   const base = SITE.url.replace(/\/$/, "");
@@ -93,7 +75,6 @@ export default async function ActressRankingPage() {
     <div className="min-h-screen px-6 pb-16 pt-12 sm:px-10">
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6">

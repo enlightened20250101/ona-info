@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { buildTokyoMotionTitle } from "@/lib/eroterest";
@@ -663,11 +664,16 @@ export default function AdminPage() {
                 <tr key={item.id} className="border-t border-border">
                   <td className="p-3">
                     {item.thumb_url ? (
-                      <img
-                        src={item.thumb_url}
-                        alt={item.title}
-                        className="h-16 w-24 rounded object-cover"
-                      />
+                      <div className="relative h-16 w-24 overflow-hidden rounded">
+                        <Image
+                          src={item.thumb_url}
+                          alt={item.title}
+                          fill
+                          sizes="96px"
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
                     ) : (
                       <div className="h-16 w-24 rounded bg-muted" />
                     )}
