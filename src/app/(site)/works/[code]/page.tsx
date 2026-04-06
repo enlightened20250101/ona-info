@@ -65,7 +65,7 @@ function findRelatedFanzaWorks(
         if (work.related_actresses.includes(name)) score += 3;
       });
       tagPool.forEach((tag) => {
-        if (work.meta_genres.includes(tag)) score += 2;
+        if (work.meta_genres?.includes(tag)) score += 2;
         if (text.includes(String(tag).toLowerCase())) score += 1;
       });
       return { work, score };
