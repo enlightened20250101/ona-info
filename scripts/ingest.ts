@@ -322,6 +322,71 @@ async function ingestFanzaWorks(options: FanzaIngestOptions = {}) {
   return { inserted, fetched: total };
 }
 
+async function ingestFanzaSaleWorks() {
+  const targetNew = Number(process.env.DMM_SALE_HITS ?? "5");
+  const skipLimit = Number(process.env.DMM_EXISTING_SLUG_LIMIT ?? "20000");
+  const skipSlugs = await getWorkSlugs(skipLimit);
+  const raws = await fetchFanzaWorks({
+    skipSlugs,
+    targetNew,
+    maxPages: Number(process.env.DMM_SALE_MAX_PAGES ?? "5"),
+    stopWhenTargetReached: false,
+    sort: "price_asc",
+  });
+
+  // セール品のみフィルタ（price < list_price）
+  const saleRaws = raws.filter((raw) => {
+    const p = raw.price;
+    const lp = raw.list_price;
+    return p != null && lp != null && p > 0 && lp > 0 && p < lp;
+  });
+
+  const total = saleRaws.length;
+  const parseReleaseDate = (value?: string | null) => {
+    if (!value) return null;
+    const trimmed = String(value).trim();
+    if (!trimmed) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return new Date(`${trimmed}T00:00:00+09:00`);
+    }
+    const parsed = new Date(trimmed);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+  };
+
+  let inserted = 0;
+  for (let index = 0; index < saleRaws.length; index += 1) {
+    const raw = saleRaws[index];
+    try {
+      const publishedAt = parseReleaseDate(raw.release_date) ?? schedulePublishedAt(index, total);
+      const article = normalizeFanzaWork(raw, publishedAt);
+      if (!article) continue;
+
+      if (article.related_actresses.length > 0) {
+        const relatedSet = new Set<string>();
+        for (const slug of article.related_actresses) {
+          const works = await findWorksByActressSlug(slug, 4);
+          works.forEach((work) => {
+            if (work.slug !== article.slug) relatedSet.add(work.slug);
+          });
+        }
+        article.related_works = Array.from(relatedSet).slice(0, 8);
+      }
+
+      const result = await insertArticleIfNew(article);
+      if (result.status === "inserted") {
+        inserted += 1;
+        logLine(`FANZA sale ${article.slug}: inserted (${raw.price}円 / 通常${raw.list_price}円)`);
+      }
+      if (inserted >= targetNew) break;
+    } catch (error) {
+      logLine(`FANZA sale ingest failed: ${raw.content_id} error=${stringifyError(error)}`);
+    }
+  }
+
+  return { inserted, fetched: raws.length, sale_found: total };
+}
+
 // Topics ingest disabled by request.
 
 async function ingestRankings() {
@@ -701,6 +766,7 @@ async function run() {
     { name: "summaries", run: ingestSummaries },
     { name: "rankings", run: ingestRankings },
     { name: "fanza", run: () => ingestFanzaWorks(fanzaSort ? { sort: fanzaSort } : {}) },
+    { name: "fanza_sale", run: ingestFanzaSaleWorks },
   ];
 
   const results = await Promise.allSettled(tasks.map((task) => task.run()));

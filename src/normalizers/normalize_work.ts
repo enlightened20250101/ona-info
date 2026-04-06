@@ -108,6 +108,8 @@ export function normalizeFanzaWork(raw: RawFanzaWork, publishedAt: Date): Articl
     related_actresses: actresses,
     published_at: publishedAt.toISOString(),
     fetched_at: raw.fetched_at,
+    price: raw.list_price ?? raw.price ?? null,
+    list_price: raw.list_price ?? raw.price ?? null,
   };
 
   return article;

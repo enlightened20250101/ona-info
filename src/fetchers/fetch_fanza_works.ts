@@ -245,6 +245,14 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
       alt: `${title} ${idx + 1}`,
     }));
 
+    // 価格情報の抽出（セール判定用）
+    const rawPrice = item?.prices?.price;
+    const rawListPrice = item?.prices?.list_price;
+    const parsedPrice = rawPrice ? Number(String(rawPrice).replace(/[^0-9]/g, "")) : null;
+    const parsedListPrice = rawListPrice ? Number(String(rawListPrice).replace(/[^0-9]/g, "")) : null;
+    const price = parsedPrice && !isNaN(parsedPrice) ? parsedPrice : null;
+    const listPrice = parsedListPrice && !isNaN(parsedListPrice) ? parsedListPrice : null;
+
     const canonicalUrl = item?.URL || item?.URLS?.affiliate || item?.URLS?.pc;
     const affiliateUrl = item?.URLS?.affiliate ?? null;
     let embedHtml: string | null = null;
@@ -295,6 +303,8 @@ export async function fetchFanzaWorks(options: FetchFanzaOptions = {}): Promise<
       affiliate_url: affiliateUrl,
       embed_html: embedHtml,
       fetched_at: fetchedAt,
+      price,
+      list_price: listPrice,
     } satisfies RawFanzaWork);
 
     if (stopWhenTargetReached && results.length >= targetNew) break;

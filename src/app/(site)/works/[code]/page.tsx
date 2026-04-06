@@ -11,6 +11,7 @@ import {
   getArticleBySlug,
   getLatestByTypePageLite,
   getLatestByTypePageBeforeLite,
+  getLatestByType,
   getWorksByMetaTagPageLite,
   getWorksByGenreLite,
 } from "@/lib/db";
@@ -41,6 +42,45 @@ function isReleased(iso: string, now: Date) {
   const parsed = parsePublishedAt(iso);
   if (!parsed) return true;
   return parsed.getTime() <= now.getTime();
+}
+
+function findRelatedFanzaWorks(
+  works: Article[],
+  source: Article,
+  limit = 5
+) {
+  const actressPool = (source.related_actresses ?? []).filter(Boolean);
+  const tagPool = (source.meta_genres ?? []).filter(Boolean);
+  const seen = new Set<string>();
+
+  const scored = works
+    .filter((work) => work.type === "work" && work.affiliate_url)
+    .map((work) => {
+      let score = 0;
+      const text = `${work.title} ${work.summary}`.toLowerCase();
+      actressPool.forEach((name) => {
+        const normalized = String(name).toLowerCase();
+        if (!normalized) return;
+        if (text.includes(normalized)) score += 3;
+        if (work.related_actresses.includes(name)) score += 3;
+      });
+      tagPool.forEach((tag) => {
+        if (work.meta_genres.includes(tag)) score += 2;
+        if (text.includes(String(tag).toLowerCase())) score += 1;
+      });
+      return { work, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  const picked: Article[] = [];
+  for (const entry of scored) {
+    if (picked.length >= limit) break;
+    if (seen.has(entry.work.slug)) continue;
+    seen.add(entry.work.slug);
+    picked.push(entry.work);
+  }
+  return picked;
 }
 
 function escapeRegExp(value: string) {
@@ -179,6 +219,9 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
   const hasActresses = article.related_actresses.length > 0;
   const hasShortBody = article.body.trim().length < 120;
   const base = SITE.url.replace(/\/$/, "");
+  const relatedFanzaWorks = isTokyoMotion
+    ? findRelatedFanzaWorks(await getLatestByType("work", 200), article, 4)
+    : [];
   const structuredData = {
     "@context": "https://schema.org",
     "@id": `${base}/works/${article.slug}#article`,
@@ -479,6 +522,7 @@ export default async function WorkPage({ params }: { params: Promise<{ code: str
             article={article}
             baseTags={baseTags}
             leadActress={leadActress}
+            relatedFanzaWorks={relatedFanzaWorks}
           />
         </Suspense>
 
@@ -582,11 +626,14 @@ async function RelatedSections({
   article,
   baseTags,
   leadActress,
+  relatedFanzaWorks,
 }: {
   article: Article;
   baseTags: string[];
   leadActress?: string;
+  relatedFanzaWorks: Article[];
 }) {
+  const isTokyoMotion = article.type === "tokyomotion";
   const base = SITE.url.replace(/\/$/, "");
   const now = getJstNow();
   const fallbackCover = article.images?.[0]?.url ?? null;
@@ -747,6 +794,46 @@ async function RelatedSections({
                 </Link>
               );
             })}
+          </div>
+        </section>
+      ) : null}
+
+      {isTokyoMotion && relatedFanzaWorks.length > 0 ? (
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold">関連作品</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {relatedFanzaWorks.map((work) => (
+              <a
+                key={work.slug}
+                href={work.affiliate_url ?? "#"}
+                rel="sponsored noopener noreferrer"
+                target="_blank"
+                className="group flex gap-3 rounded-2xl border border-border bg-white p-3 transition hover:-translate-y-1 hover:border-accent/40"
+              >
+                <div className="relative h-24 w-16 flex-none overflow-hidden rounded-lg bg-muted">
+                  {work.images[0]?.url ? (
+                    <SafeImage
+                      src={work.images[0].url}
+                      alt={work.title}
+                      fill
+                      sizes="64px"
+                      unoptimized={shouldBypassNextImage(work.images[0].url)}
+                      className="object-cover"
+                    />
+                  ) : null}
+                </div>
+                  <div className="flex min-w-0 flex-1 flex-col justify-between">
+                    <div>
+                      <p className="mt-1 line-clamp-2 text-sm font-semibold">
+                        {work.title}
+                      </p>
+                    </div>
+                    <span className="mt-2 inline-flex w-fit items-center rounded-full border border-border px-2 py-0.5 text-xs text-muted group-hover:border-accent/40">
+                      作品をチェック
+                    </span>
+                  </div>
+              </a>
+            ))}
           </div>
         </section>
       ) : null}

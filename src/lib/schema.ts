@@ -22,6 +22,8 @@ export type Article = {
   related_actresses: string[];
   published_at: string;
   fetched_at: string;
+  price?: number | null;
+  list_price?: number | null;
 };
 
 export type RawFanzaWork = {
@@ -38,4 +40,6 @@ export type RawFanzaWork = {
   affiliate_url?: string | null;
   embed_html?: string | null;
   fetched_at: string;
+  price?: number | null;
+  list_price?: number | null;
 };

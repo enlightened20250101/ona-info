@@ -26,6 +26,8 @@ type Database = {
           related_actresses: Json;
           published_at: string;
           fetched_at: string;
+          price: number | null;
+          list_price: number | null;
         };
         Insert: {
           id: string;
@@ -45,6 +47,8 @@ type Database = {
           related_actresses: Json;
           published_at: string;
           fetched_at: string;
+          price?: number | null;
+          list_price?: number | null;
         };
         Update: {
           id?: string;
@@ -64,6 +68,8 @@ type Database = {
           related_actresses?: Json;
           published_at?: string;
           fetched_at?: string;
+          price?: number | null;
+          list_price?: number | null;
         };
         Relationships: [];
       };
