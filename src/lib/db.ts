@@ -1345,21 +1345,47 @@ export async function getActressCovers(actresses: string[]) {
     );
   }
 
-  // Fallback: fetch per-actress latest cover from articles.
+  // Fallback: prefer solo works (related_actresses has only this actress)
+  // then fall back to any work featuring this actress.
   const coverEntries = await Promise.all(
     actresses.map(async (actressSlug) => {
-      const { data: row } = await client
+      // 1. Try solo works first (related_actresses = [actressSlug] exactly)
+      const { data: soloRows } = await client
         .from("articles")
-        .select("images")
+        .select("images, related_actresses")
         .eq("type", "work")
         .contains("related_actresses", [actressSlug])
         .order("published_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const images = parseArray<{ url: string; alt: string }>(
-        (row as { images?: Json } | null)?.images
-      );
-      return [actressSlug, images?.[0]?.url ?? null] as const;
+        .limit(20);
+
+      type CoverRow = { images?: Json; related_actresses?: Json };
+      const rows = (soloRows ?? []) as CoverRow[];
+
+      const soloWork = rows.find((r) => {
+        const ra = r.related_actresses;
+        return Array.isArray(ra) && ra.length === 1;
+      });
+
+      if (soloWork) {
+        const images = parseArray<{ url: string; alt: string }>(soloWork.images);
+        if (images?.[0]?.url) {
+          return [actressSlug, images[0].url] as const;
+        }
+      }
+
+      // 2. Fallback to any work (fewest co-stars preferred)
+      const sorted = rows
+        .filter((r) => Array.isArray(r.related_actresses))
+        .sort((a, b) => (a.related_actresses as string[]).length - (b.related_actresses as string[]).length);
+
+      for (const row of sorted) {
+        const images = parseArray<{ url: string; alt: string }>(row.images);
+        if (images?.[0]?.url) {
+          return [actressSlug, images[0].url] as const;
+        }
+      }
+
+      return [actressSlug, null] as const;
     })
   );
   return new Map(coverEntries);
