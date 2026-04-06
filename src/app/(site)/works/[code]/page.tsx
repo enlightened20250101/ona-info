@@ -175,7 +175,7 @@ export async function generateMetadata({
       title: `${article.title} (${article.slug}) | エロ動画・動画 | ${SITE.name}`,
       description: `${article.title}のエロ動画・動画情報を無料でチェック。${shortDescription}`,
       type: "article",
-      images: article.images?.[0]?.url ? [{ url: article.images[0].url }] : undefined,
+      // images は opengraph-image.tsx で自動生成（安全なテキスト画像）
     },
   };
 }

@@ -22,12 +22,6 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug: rawSlug } = await params;
   const slug = decodeURIComponent(rawSlug);
-  const previewResult = await getWorksByActressPage(slug, 1, 1);
-  const previewImage =
-    previewResult.items[0]?.images?.[0]?.url &&
-    !isLikelyInvalidImageUrl(previewResult.items[0].images[0].url)
-      ? previewResult.items[0].images[0].url
-      : undefined;
   return {
     title: `${slug} エロ動画・動画・出演作品 | ${SITE.name}`,
     description: `${slug}のエロ動画・動画・出演作品を無料でチェック。最新の関連作品をまとめて紹介。`,
@@ -42,7 +36,7 @@ export async function generateMetadata({
       title: `${slug} エロ動画・動画・出演作品 | ${SITE.name}`,
       description: `${slug}のエロ動画・動画・出演作品を無料でチェック。`,
       type: "profile",
-      images: previewImage ? [{ url: previewImage }] : undefined,
+      // images は opengraph-image.tsx で自動生成（安全なテキスト画像）
     },
   };
 }
