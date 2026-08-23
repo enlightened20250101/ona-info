@@ -1,8 +1,8 @@
 name: Refresh GA4 Rankings
 
 on:
-  schedule:
-    - cron: "5 * * * *"
+  # Scheduled GA4 ranking refresh is intentionally disabled while the site is deactivated.
+  # Run manually from GitHub Actions only if a one-off refresh is needed.
   workflow_dispatch: {}
 
 jobs:

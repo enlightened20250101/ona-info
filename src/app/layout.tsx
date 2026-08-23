@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import Script from "next/script";
 import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { SITE } from "@/lib/site";
 import MobileNav from "@/components/MobileNav";
@@ -35,6 +34,15 @@ export const metadata: Metadata = {
     type: "website",
     url: SITE.url,
   },
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
 };
 
 export default function RootLayout({
@@ -43,7 +51,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const siteUrl = SITE.url.replace(/\/$/, "");
-  const gaId = process.env.NEXT_PUBLIC_GA_ID;
   const webSiteJsonLd = {
     "@context": "https://schema.org",
     "@id": `${siteUrl}/#website`,
@@ -66,22 +73,6 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className={`${spaceGrotesk.variable} ${plexMono.variable} antialiased`}>
-        {gaId ? (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-              strategy="afterInteractive"
-            />
-            <Script id="ga4-init" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${gaId}', { anonymize_ip: true });
-              `}
-            </Script>
-          </>
-        ) : null}
         <Suspense fallback={null}>
           <RouteProgress />
         </Suspense>

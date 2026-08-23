@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "awsimgsrc.dmm.co.jp" },
       { protocol: "https", hostname: "pics.dmm.co.jp" },
